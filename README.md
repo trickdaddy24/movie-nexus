@@ -2,7 +2,7 @@
 
 A full-featured movie and TV show database platform. Import from TMDb, TVDb, Plex, Trakt. Export to JSON/CSV/XML. Track your watch history, create lists, and explore comprehensive metadata.
 
-[![Version](https://img.shields.io/badge/version-0.1.0--alpha-blue)](./VERSION)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue)](./VERSION)
 [![License](https://img.shields.io/badge/license-MIT-green)](#license)
 [![GitHub](https://img.shields.io/badge/github-trickdaddy24%2Fmovie--nexus-black?logo=github)](https://github.com/trickdaddy24/movie-nexus)
 
@@ -65,6 +65,44 @@ See `.env.example` for all required variables:
 - `FANART_API_KEY` — optional
 - `TRAKT_CLIENT_ID` — optional
 - `PLEX_URL` / `PLEX_TOKEN` — optional for library sync
+
+## Deployment
+
+### Deploy / Redeploy
+
+```bash
+# Standard deploy (pull latest, rebuild, restart)
+./scripts/deploy.sh main
+
+# Check status
+./scripts/deploy.sh status
+```
+
+### Backup & Recovery
+
+Automated daily backups run via cron at 3:00 AM, dumping PostgreSQL and the `.env` file to `/opt/movienexus/backups/`. Retention: 7 daily + 4 weekly backups.
+
+```bash
+# Manual backup
+./scripts/backup-db.sh
+
+# Restore from latest backup
+./scripts/restore-db.sh
+
+# Restore from specific file
+./scripts/restore-db.sh backups/movienexus_2026-04-17.sql.gz
+```
+
+### Full Disaster Recovery
+
+If the server is lost completely:
+
+1. Set up new server with Docker + Saltbox
+2. Clone the repo: `git clone https://github.com/trickdaddy24/movie-nexus.git /opt/movienexus`
+3. Copy `.env` from backup (or recreate from `.env.example`)
+4. Run: `./scripts/deploy.sh main`
+5. If DB backup available: `./scripts/restore-db.sh /path/to/backup.sql.gz`
+6. If no backup: re-import via API — `POST /api/import/discover/movies?pages=1`
 
 ## ID System
 

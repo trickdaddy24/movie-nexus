@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-  # PostgreSQL Database
   db:
     image: postgres:16-alpine
     container_name: movienexus-db
@@ -11,22 +8,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-movienexus}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5435:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - movienexus
+      - saltbox
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: movienexus-redis
-    ports:
-      - "6385:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -35,17 +27,16 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - movienexus
+      - saltbox
 
-  # FastAPI Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: movienexus-backend
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-movienexus}
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@movienexus-db:5432/${POSTGRES_DB:-movienexus}
+      REDIS_URL: redis://movienexus-redis:6379/0
       TMDB_API_KEY: ${TMDB_API_KEY}
       TVDB_API_KEY: ${TVDB_API_KEY}
       FANART_API_KEY: ${FANART_API_KEY}
@@ -61,33 +52,56 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./VERSION:/app/../VERSION:ro
     networks:
-      - movienexus
+      - saltbox
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.movienexus-api.rule=Host(`movienexus.local`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.movienexus-api-http.entrypoints=web"
+      - "traefik.http.routers.movienexus-api-http.middlewares=globalHeaders@file,redirect-to-https@docker,robotHeaders@file"
+      - "traefik.http.routers.movienexus-api-http.rule=Host(`movienexus.e4z.xyz`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.movienexus-api-http.service=movienexus-api-http"
+      - "traefik.http.routers.movienexus-api.entrypoints=websecure"
+      - "traefik.http.routers.movienexus-api.middlewares=globalHeaders@file,secureHeaders@file,robotHeaders@file"
+      - "traefik.http.routers.movienexus-api.rule=Host(`movienexus.e4z.xyz`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.movienexus-api.service=movienexus-api"
+      - "traefik.http.routers.movienexus-api.tls=true"
+      - "traefik.http.routers.movienexus-api.tls.certresolver=cfdns"
+      - "traefik.http.routers.movienexus-api.tls.domains[0].main=e4z.xyz"
+      - "traefik.http.routers.movienexus-api.tls.domains[0].sans=*.e4z.xyz"
+      - "traefik.http.routers.movienexus-api.tls.options=securetls@file"
+      - "traefik.http.services.movienexus-api-http.loadbalancer.server.port=8000"
       - "traefik.http.services.movienexus-api.loadbalancer.server.port=8000"
 
-  # Next.js Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: movienexus-frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8910}/api
+      NEXT_PUBLIC_API_URL: https://movienexus.e4z.xyz/api
     ports:
       - "3210:3000"
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/.next
     networks:
-      - movienexus
+      - saltbox
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.movienexus-web.rule=Host(`movienexus.local`)"
+      - "traefik.http.routers.movienexus-web-http.entrypoints=web"
+      - "traefik.http.routers.movienexus-web-http.middlewares=globalHeaders@file,redirect-to-https@docker,robotHeaders@file"
+      - "traefik.http.routers.movienexus-web-http.rule=Host(`movienexus.e4z.xyz`)"
+      - "traefik.http.routers.movienexus-web-http.service=movienexus-web-http"
+      - "traefik.http.routers.movienexus-web.entrypoints=websecure"
+      - "traefik.http.routers.movienexus-web.middlewares=globalHeaders@file,secureHeaders@file,robotHeaders@file"
+      - "traefik.http.routers.movienexus-web.rule=Host(`movienexus.e4z.xyz`)"
+      - "traefik.http.routers.movienexus-web.service=movienexus-web"
+      - "traefik.http.routers.movienexus-web.tls=true"
+      - "traefik.http.routers.movienexus-web.tls.certresolver=cfdns"
+      - "traefik.http.routers.movienexus-web.tls.domains[0].main=e4z.xyz"
+      - "traefik.http.routers.movienexus-web.tls.domains[0].sans=*.e4z.xyz"
+      - "traefik.http.routers.movienexus-web.tls.options=securetls@file"
+      - "traefik.http.services.movienexus-web-http.loadbalancer.server.port=3000"
       - "traefik.http.services.movienexus-web.loadbalancer.server.port=3000"
 
 volumes:
@@ -95,5 +109,5 @@ volumes:
   redis_data:
 
 networks:
-  movienexus:
-    driver: bridge
+  saltbox:
+    external: true

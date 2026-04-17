@@ -39,14 +39,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API key management UI
 - Admin panel
 
-## [0.1.0-alpha] — TBD
+## [0.1.0] — 2026-04-17
+
+### Added
+- Full FastAPI backend with async SQLAlchemy (asyncpg) + PostgreSQL 16
+- TMDb movie + TV show import pipeline with SSE progress streaming
+- Fanart.tv artwork integration (posters, backdrops, logos, clearart, disc, banner)
+- Search across movies and TV shows (ILIKE, sorted by popularity)
+- Export to JSON (configurable indent), CSV, XML
+- Next.js 15 frontend with dark theme, poster images, responsive grid layout
+- Movie and TV show list pages with pagination
+- Detail pages with ratings (TMDb/IMDb/Trakt), genres, seasons/episodes
+- API docs at /api/docs (Swagger UI)
+- Deploy script (`scripts/deploy.sh`) with main/restore/status commands
+- Automated daily PostgreSQL backup (`scripts/backup-db.sh`) with 7-day + 4-week retention
+- Database restore script (`scripts/restore-db.sh`)
+- Docker Compose with Traefik integration (Saltbox pattern)
+- Nexus ID system: ms-XXXXXXX (movies), tv-XXXXXXX (shows), es-XXXXXXXXX (episodes)
+
+## [0.1.0-alpha] — 2026-04-17
 
 ### Added
 - Initial project scaffolding
-- Database schema (PostgreSQL)
-- FastAPI backend
-- Next.js frontend
+- Database schema design
 - Docker Compose configuration
+- README, ROADMAP, CHANGELOG
 
 ---
 
