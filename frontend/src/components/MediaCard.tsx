@@ -32,9 +32,9 @@ export default function MediaCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col overflow-hidden rounded-xl border border-nexus-border bg-nexus-card transition hover:border-nexus-accent/50 hover:shadow-lg hover:shadow-nexus-accent/5"
+      className="group flex flex-col overflow-hidden rounded-xl border border-nexus-border bg-nexus-card transition-all duration-200 hover:border-nexus-accent hover:shadow-[0_4px_12px_rgba(138,77,255,0.15)] dark:bg-[#121840] dark:border-[#1E2A5A] dark:hover:border-[#00E0FF] dark:hover:shadow-[0_0_20px_rgba(0,224,255,0.35)]"
     >
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-nexus-border">
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#F3F0FF] dark:bg-[#1E2A5A]">
         {thumbUrl && !imgError ? (
           <img
             src={thumbUrl}
@@ -55,10 +55,10 @@ export default function MediaCard({
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
-        <h3 className="text-sm font-semibold text-nexus-text line-clamp-2 group-hover:text-nexus-accent transition">
+        <h3 className="text-sm font-semibold text-nexus-text line-clamp-2 group-hover:text-nexus-accent transition dark:text-white">
           {title}
         </h3>
-        <div className="flex items-center gap-2 text-xs text-nexus-muted">
+        <div className="flex items-center gap-2 text-xs text-nexus-muted dark:text-[#64748B]">
           {yearStr && <span>{yearStr}</span>}
           {subtitle && <span>{subtitle}</span>}
         </div>
@@ -67,7 +67,7 @@ export default function MediaCard({
             {genres.slice(0, 3).map((g) => (
               <span
                 key={g.name}
-                className="rounded-full bg-nexus-border px-2 py-0.5 text-[10px] text-nexus-muted"
+                className="rounded-full bg-[#F3F0FF] px-2 py-0.5 text-[10px] text-[#8A4DFF] border border-[#E5E7EB] dark:bg-[#1E2A5A] dark:text-[#64748B] dark:border-[#1E2A5A]"
               >
                 {g.name}
               </span>

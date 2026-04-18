@@ -2,17 +2,19 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
         nexus: {
-          bg: "#0a0a0f",
-          card: "#12121a",
-          border: "#1e1e2e",
-          accent: "#6366f1",
-          "accent-hover": "#818cf8",
-          muted: "#71717a",
-          text: "#e4e4e7",
+          bg: "#FFFFFF",
+          card: "#F9F9FB",
+          border: "#E5E7EB",
+          accent: "#8A4DFF",
+          "accent-hover": "#7A3DEF",
+          muted: "#6B7280",
+          text: "#0B0F2A",
+          cyan: "#2EC7FF",
         },
       },
     },

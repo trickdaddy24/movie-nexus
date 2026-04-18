@@ -45,12 +45,12 @@ export default async function HomePage() {
 
       {stats.top_genres.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-3">Top Genres</h2>
+          <h2 className="text-lg font-semibold mb-3 dark:text-white">Top Genres</h2>
           <div className="flex flex-wrap gap-2">
             {stats.top_genres.map((g) => (
               <span
                 key={g.name}
-                className="rounded-full border border-nexus-border bg-nexus-card px-3 py-1 text-sm text-nexus-text"
+                className="rounded-full border border-nexus-border bg-nexus-card px-3 py-1 text-sm text-nexus-text dark:bg-[#121840] dark:border-[#1E2A5A] dark:text-nexus-muted"
               >
                 {g.name} <span className="text-nexus-muted">({g.count})</span>
               </span>
@@ -62,8 +62,8 @@ export default async function HomePage() {
       {movies.items.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Recent Movies</h2>
-            <Link href="/movies" className="text-sm text-nexus-accent hover:text-nexus-accent-hover transition">
+            <h2 className="text-lg font-semibold dark:text-white">Recent Movies</h2>
+            <Link href="/movies" className="text-sm text-nexus-accent hover:text-nexus-accent-hover dark:hover:text-[#00E0FF] transition">
               View all &rarr;
             </Link>
           </div>
@@ -89,8 +89,8 @@ export default async function HomePage() {
       {shows.items.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Recent TV Shows</h2>
-            <Link href="/shows" className="text-sm text-nexus-accent hover:text-nexus-accent-hover transition">
+            <h2 className="text-lg font-semibold dark:text-white">Recent TV Shows</h2>
+            <Link href="/shows" className="text-sm text-nexus-accent hover:text-nexus-accent-hover dark:hover:text-[#00E0FF] transition">
               View all &rarr;
             </Link>
           </div>
@@ -118,9 +118,9 @@ export default async function HomePage() {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-nexus-border bg-nexus-card p-4 text-center">
+    <div className="rounded-xl border border-nexus-border bg-nexus-card p-4 text-center dark:bg-[#121840] dark:border-[#1E2A5A]">
       <div className="text-2xl font-bold text-nexus-accent">{value}</div>
-      <div className="text-xs text-nexus-muted mt-1">{label}</div>
+      <div className="text-xs text-nexus-muted mt-1 dark:text-[#64748B]">{label}</div>
     </div>
   );
 }

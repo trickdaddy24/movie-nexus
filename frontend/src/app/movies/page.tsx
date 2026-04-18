@@ -27,7 +27,7 @@ export default async function MoviesPage({
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Movies</h1>
+        <h1 className="text-2xl font-bold dark:text-white">Movies</h1>
         <span className="text-sm text-nexus-muted">{data.total} total</span>
       </div>
 
@@ -53,18 +53,18 @@ export default async function MoviesPage({
           {page > 1 && (
             <a
               href={`/movies?page=${page - 1}&sort=${sort}`}
-              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition"
+              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#121840] dark:border-[#1E2A5A] dark:text-nexus-muted dark:hover:border-[#00E0FF]"
             >
               Previous
             </a>
           )}
-          <span className="rounded-lg bg-nexus-accent px-4 py-2 text-sm font-medium text-white">
+          <span className="rounded-lg bg-nexus-accent px-4 py-2 text-sm font-medium text-white dark:bg-nexus-accent dark:text-white dark:border-nexus-accent">
             {page} / {data.pages}
           </span>
           {page < data.pages && (
             <a
               href={`/movies?page=${page + 1}&sort=${sort}`}
-              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition"
+              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#121840] dark:border-[#1E2A5A] dark:text-nexus-muted dark:hover:border-[#00E0FF]"
             >
               Next
             </a>
