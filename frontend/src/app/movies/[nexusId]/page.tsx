@@ -23,19 +23,19 @@ export default async function MovieDetailPage({
       <div>
         <div className="flex items-start gap-4 mb-2">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold">{movie.title}</h1>
+            <h1 className="text-3xl font-bold dark:text-white">{movie.title}</h1>
             {movie.tagline && (
               <p className="text-nexus-muted italic mt-1">{movie.tagline}</p>
             )}
           </div>
           {movie.content_rating && (
-            <span className="shrink-0 rounded border border-nexus-border px-2 py-1 text-xs text-nexus-muted">
+            <span className="shrink-0 rounded border border-nexus-border px-2 py-1 text-xs text-nexus-muted dark:border-[#1E2A5A] dark:text-nexus-muted">
               {movie.content_rating}
             </span>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-sm text-nexus-muted mt-3">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-nexus-muted mt-3 dark:text-[#64748B]">
           {year && <span>{year}</span>}
           {movie.runtime && <span>{movie.runtime} min</span>}
           {movie.status && <span>{movie.status}</span>}
@@ -54,7 +54,7 @@ export default async function MovieDetailPage({
           {movie.genres.map((g) => (
             <span
               key={g.name}
-              className="rounded-full border border-nexus-border bg-nexus-card px-3 py-1 text-sm"
+              className="rounded-full border border-nexus-border bg-nexus-card px-3 py-1 text-sm dark:bg-[#1E2A5A] dark:text-nexus-muted dark:border-[#1E2A5A]"
             >
               {g.name}
             </span>
@@ -64,8 +64,8 @@ export default async function MovieDetailPage({
 
       {movie.overview && (
         <section>
-          <h2 className="text-lg font-semibold mb-2">Overview</h2>
-          <p className="text-nexus-muted leading-relaxed">{movie.overview}</p>
+          <h2 className="text-lg font-semibold mb-2 dark:text-white">Overview</h2>
+          <p className="text-nexus-muted leading-relaxed dark:text-nexus-muted">{movie.overview}</p>
         </section>
       )}
 
@@ -84,7 +84,7 @@ export default async function MovieDetailPage({
         )}
       </section>
 
-      <div className="border-t border-nexus-border pt-4 text-xs text-nexus-muted">
+      <div className="border-t border-nexus-border pt-4 text-xs text-nexus-muted dark:border-[#1E2A5A]">
         <span>Added: {movie.added_at ? new Date(movie.added_at).toLocaleDateString() : "—"}</span>
         {movie.updated_at && (
           <span className="ml-4">Updated: {new Date(movie.updated_at).toLocaleDateString()}</span>
@@ -96,9 +96,9 @@ export default async function MovieDetailPage({
 
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-nexus-border bg-nexus-card p-3">
-      <div className="text-xs text-nexus-muted">{label}</div>
-      <div className="text-sm font-medium mt-0.5">{value}</div>
+    <div className="rounded-lg border border-nexus-border bg-nexus-card p-3 dark:bg-[#121840] dark:border-[#1E2A5A]">
+      <div className="text-xs text-nexus-muted dark:text-[#64748B]">{label}</div>
+      <div className="text-sm font-medium mt-0.5 dark:text-white">{value}</div>
     </div>
   );
 }
