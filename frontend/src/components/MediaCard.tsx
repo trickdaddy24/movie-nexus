@@ -67,7 +67,7 @@ export default function MediaCard({
             {genres.slice(0, 3).map((g) => (
               <span
                 key={g.name}
-                className="rounded-full bg-[#F3F0FF] px-2 py-0.5 text-[10px] text-[#8A4DFF] border border-[#E5E7EB] dark:bg-[#1E2A5A] dark:text-nexus-muted dark:border-[#1E2A5A]"
+                className="rounded-full bg-[#F3F0FF] px-2 py-0.5 text-[10px] text-[#8A4DFF] border border-[#E5E7EB] dark:bg-[#1E2A5A] dark:text-[#64748B] dark:border-[#1E2A5A]"
               >
                 {g.name}
               </span>

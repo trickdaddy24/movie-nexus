@@ -58,7 +58,7 @@ export default async function ShowDetailPage({
       {show.overview && (
         <section>
           <h2 className="text-lg font-semibold mb-2 dark:text-white">Overview</h2>
-          <p className="text-nexus-muted leading-relaxed dark:text-nexus-muted">{show.overview}</p>
+          <p className="text-nexus-muted leading-relaxed dark:text-[#64748B]">{show.overview}</p>
         </section>
       )}
 

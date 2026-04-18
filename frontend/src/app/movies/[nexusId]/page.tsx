@@ -65,7 +65,7 @@ export default async function MovieDetailPage({
       {movie.overview && (
         <section>
           <h2 className="text-lg font-semibold mb-2 dark:text-white">Overview</h2>
-          <p className="text-nexus-muted leading-relaxed dark:text-nexus-muted">{movie.overview}</p>
+          <p className="text-nexus-muted leading-relaxed dark:text-[#64748B]">{movie.overview}</p>
         </section>
       )}
 

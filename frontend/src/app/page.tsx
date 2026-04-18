@@ -63,7 +63,7 @@ export default async function HomePage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold dark:text-white">Recent Movies</h2>
-            <Link href="/movies" className="text-sm text-nexus-accent hover:text-nexus-accent-hover transition">
+            <Link href="/movies" className="text-sm text-nexus-accent hover:text-nexus-accent-hover dark:hover:text-[#00E0FF] transition">
               View all &rarr;
             </Link>
           </div>
@@ -90,7 +90,7 @@ export default async function HomePage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold dark:text-white">Recent TV Shows</h2>
-            <Link href="/shows" className="text-sm text-nexus-accent hover:text-nexus-accent-hover transition">
+            <Link href="/shows" className="text-sm text-nexus-accent hover:text-nexus-accent-hover dark:hover:text-[#00E0FF] transition">
               View all &rarr;
             </Link>
           </div>
