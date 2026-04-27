@@ -39,6 +39,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API key management UI
 - Admin panel
 
+## [0.2.1] — 2026-04-27
+
+### Added
+- Animated flowing gradient on LogoBrand component — 9-color cycle (dark purple, hot pink, yellow, green, cyan, blue, mint, purple) flowing right-to-left at 38s per cycle
+- `@keyframes gradient-flow` in globals.css for smooth continuous background-position animation
+
+### Fixed
+- `frontend/src/lib/api.ts` was missing from server deployment — added to repo and redeployed
+- Created `frontend/public/` directory (required for Docker multi-stage build)
+
+### Infrastructure
+- Redeployed to fresh Hetzner Server 2 (Ubuntu 24.04, 95.217.229.185) after server rebuild
+- Docker partition expanded to 100GB loop file on 4TB RAID
+- Traefik + Authelia installed on Server 2 via Saltbox
+- All API keys reconstructed and stored in `.env`
+
+## [0.2.0] — 2026-04-18
+
+### Added
+- Full dark/light mode theme (neon cyberpunk dark + Stripe-clean light)
+- LogoBrand component with cyan-to-purple gradient and glow animation
+- ThemeToggle component
+- Nexus color token system in Tailwind config
+- All pages themed with dark mode overrides
+
 ## [0.1.0] — 2026-04-17
 
 ### Added
