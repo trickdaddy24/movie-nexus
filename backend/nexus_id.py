@@ -20,20 +20,20 @@ _COUNTER_TABLE = "nexus_id_counters"
 
 
 async def generate_nexus_id(db: AsyncSession, media_type: str) -> str:
-    """Generate next nexus_id for the given media_type. Atomic via INSERT ON CONFLICT."""
+    """Generate next nexus_id for the given media_type. Atomic via INSERT...RETURNING."""
+    if media_type not in PREFIXES:
+        raise ValueError(f"Unknown media_type: {media_type!r}. Valid types: {list(PREFIXES)}")
     prefix = PREFIXES[media_type]
 
-    await db.execute(
+    # Single atomic statement — RETURNING captures the value set by this specific update
+    result = await db.execute(
         text(f"""
             INSERT INTO {_COUNTER_TABLE} (media_type, next_val)
             VALUES (:mt, 1)
             ON CONFLICT (media_type) DO UPDATE
             SET next_val = {_COUNTER_TABLE}.next_val + 1
+            RETURNING next_val
         """),
-        {"mt": media_type},
-    )
-    result = await db.execute(
-        text(f"SELECT next_val FROM {_COUNTER_TABLE} WHERE media_type = :mt"),
         {"mt": media_type},
     )
     next_val = result.scalar()
