@@ -39,6 +39,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API key management UI
 - Admin panel
 
+## [0.3.0] — 2026-04-27
+
+### Added
+- Data Platform v2 foundation
+- ID system rewrite: 11 media types, no padding/dash (ms1, tv550, etc.), atomic counter table
+- Bulk import pipeline: POST /api/import/bulk/start — crawls TMDb discover (50k movies / 20k shows), Telegram notification every 10k records
+- Trakt API client (trending, popular, ratings endpoints)
+- TrendingSnapshot table with daily/weekly/alltime windows
+- GET /api/trending endpoint (latest snapshots by media_type + window)
+- Multi-source rating sync: nightly TMDb update with Telegram alerts on drops >2pts or IMDb ID changes
+- Artwork verification: GET /api/admin/artwork/verify — SHA-256 hash + Pillow dimension checks
+- Admin export: GET /api/admin/export (JSON indent=4, CSV, XML)
+- Nightly automated backup to /opt/movienexus/backups/YYYY-MM-DD/ with Telegram confirmation
+- APScheduler cron jobs: trending@2am, rating sync+backup@3am, trending summary@8am
+- Legacy ID redirect: GET /api/movies/ms-0000001 → 301 → /api/movies/ms1
+- One-time migration script: scripts/migrate_nexus_ids.py
+- Telegram notification helper (api/telegram.py)
+
 ## [0.2.1] — 2026-04-27
 
 ### Added
