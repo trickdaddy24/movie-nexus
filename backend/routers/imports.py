@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -304,6 +304,95 @@ async def _run_import(session_id: int, media_type: str, tmdb_ids: list[int]):
     progress["status"] = "completed"
 
 
+async def _run_bulk_crawl(session_id: int, media_type: str, total_pages: int):
+    """Crawl TMDb discover pages and import everything. Telegram every 10k records."""
+    progress = _active_jobs[session_id]
+    imported_total = 0
+    skipped_total = 0
+    failed_total = 0
+    last_notified_at = 0
+
+    async with async_session() as db:
+        for page in range(1, total_pages + 1):
+            try:
+                if media_type == "movie":
+                    data = await tmdb_client.discover_movies(page=page, sort_by="popularity.desc")
+                else:
+                    data = await tmdb_client.discover_tv(page=page, sort_by="popularity.desc")
+            except Exception as e:
+                logger.error(f"Discover page {page} failed: {e}")
+                progress["failed"] += 1
+                await asyncio.sleep(2)
+                continue
+
+            items = data.get("results", [])
+            for item in items:
+                tmdb_id = item.get("id")
+                if not tmdb_id:
+                    continue
+                try:
+                    if media_type == "movie":
+                        result = await _import_single_movie(db, tmdb_id)
+                    else:
+                        result = await _import_single_show(db, tmdb_id)
+
+                    if result == "imported":
+                        imported_total += 1
+                        progress["imported"] += 1
+                    else:
+                        skipped_total += 1
+                        progress["skipped"] += 1
+                    progress["current_title"] = item.get("title") or item.get("name", f"TMDb #{tmdb_id}")
+                except Exception as e:
+                    failed_total += 1
+                    progress["failed"] += 1
+                    logger.error(f"Bulk import failed for {tmdb_id}: {e}")
+
+            # Notify every 10k imported records
+            total_processed = imported_total + skipped_total
+            milestone = (total_processed // 10_000) * 10_000
+            if milestone > last_notified_at and milestone > 0:
+                last_notified_at = milestone
+                eta_pages_left = total_pages - page
+                approx_remaining = eta_pages_left * len(items)
+                msg = (
+                    f"<b>MovieNexus Bulk Import</b> — {milestone:,} records processed\n"
+                    f"✅ Imported: {imported_total:,}\n"
+                    f"⏭ Skipped: {skipped_total:,}\n"
+                    f"❌ Failed: {failed_total:,}\n"
+                    f"📄 Page: {page}/{total_pages}\n"
+                    f"⏳ ~{approx_remaining:,} records remaining"
+                )
+                from api.telegram import send_telegram
+                await send_telegram(msg)
+
+            progress["page"] = page
+            await asyncio.sleep(0.1)
+
+        # Final notification
+        final_msg = (
+            f"<b>MovieNexus Bulk Import COMPLETE</b>\n"
+            f"Type: {media_type}\n"
+            f"✅ Imported: {imported_total:,}\n"
+            f"⏭ Skipped: {skipped_total:,}\n"
+            f"❌ Failed: {failed_total:,}\n"
+            f"📄 Pages crawled: {total_pages:,}"
+        )
+        from api.telegram import send_telegram
+        await send_telegram(final_msg)
+
+        session_obj = await db.get(ImportSession, session_id)
+        if session_obj:
+            session_obj.finished_at = datetime.now(timezone.utc)
+            session_obj.imported = imported_total
+            session_obj.skipped = skipped_total
+            session_obj.failed = failed_total
+            session_obj.status = "completed"
+            await db.commit()
+
+    progress["status"] = "completed"
+
+
 @router.post("/movies/start")
 async def start_movie_import(
     tmdb_ids: list[int],
@@ -414,6 +503,48 @@ async def import_discover_shows(
 
     asyncio.create_task(_run_import(session.id, "show", tmdb_ids))
     return {"session_id": session.id, "message": f"Discovering {len(tmdb_ids)} shows from {pages} pages"}
+
+
+@router.post("/bulk/start")
+async def start_bulk_import(
+    media_type: str = Query("movie", regex="^(movie|show)$"),
+    pages: int = Query(2500, ge=1, le=5000),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Start a bulk crawl of TMDb discover sorted by popularity.
+    movies: pages=2500 → ~50,000 titles
+    shows:  pages=1000 → ~20,000 titles
+    Sends Telegram notification every 10k records.
+    """
+    estimated = pages * 20
+    session = ImportSession(
+        source="tmdb_bulk",
+        media_type=media_type,
+        total=estimated,
+    )
+    db.add(session)
+    await db.commit()
+    await db.refresh(session)
+
+    _active_jobs[session.id] = {
+        "session_id": session.id,
+        "source": "tmdb_bulk",
+        "status": "running",
+        "media_type": media_type,
+        "total": estimated,
+        "imported": 0,
+        "skipped": 0,
+        "failed": 0,
+        "page": 0,
+        "current_title": "",
+    }
+
+    asyncio.create_task(_run_bulk_crawl(session.id, media_type, pages))
+    return {
+        "session_id": session.id,
+        "message": f"Bulk {media_type} crawl started ({pages} pages, ~{estimated:,} titles)",
+    }
 
 
 @router.get("/progress/{session_id}")
