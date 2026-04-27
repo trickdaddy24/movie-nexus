@@ -1,0 +1,193 @@
+<h2>Dark & Light Mode — Side by Side</h2>
+<p class="subtitle">Nav, poster cards, stat cards, and genre pills. Click either side to select your preferred default.</p>
+
+<style>
+  .split-preview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .mode-panel {
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .mode-panel:hover { border-color: #8A4DFF; }
+  .mode-panel.selected { border-color: #00E0FF; box-shadow: 0 0 20px rgba(0,224,255,0.3); }
+
+  /* --- DARK PANEL --- */
+  .dark-panel { background: #0B0F2A; }
+  .dark-nav {
+    background: rgba(11,15,42,0.9);
+    border-bottom: 1px solid #1E2A5A;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .dark-logo {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dark-play {
+    font-size: 20px;
+    background: linear-gradient(135deg, #2EC7FF, #8A4DFF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(0,224,255,0.7));
+  }
+  .dark-wordmark {
+    background: linear-gradient(90deg, #2EC7FF, #8A4DFF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .dark-nav-links { display: flex; gap: 16px; align-items: center; }
+  .dark-nav-link { color: #64748B; font-size: 12px; }
+  .dark-search { background: #121840; border: 1px solid #1E2A5A; border-radius: 6px; padding: 4px 10px; color: #64748B; font-size: 11px; }
+  .dark-body { padding: 16px; }
+  .dark-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .dark-stat { background: #121840; border: 1px solid #1E2A5A; border-radius: 10px; padding: 10px; text-align: center; }
+  .dark-stat-val { font-size: 18px; font-weight: 700; color: #8A4DFF; }
+  .dark-stat-label { font-size: 10px; color: #64748B; margin-top: 2px; }
+  .dark-section-title { color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .dark-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .dark-card {
+    background: #121840;
+    border: 1px solid #1E2A5A;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+  .dark-card:hover {
+    border-color: #00E0FF;
+    box-shadow: 0 0 14px rgba(0,224,255,0.35);
+    transform: translateY(-3px);
+  }
+  .dark-poster { aspect-ratio: 2/3; background: linear-gradient(135deg, #1E2A5A, #0B0F2A); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #1E2A5A; font-weight: 900; }
+  .dark-card-body { padding: 6px 8px; }
+  .dark-card-title { font-size: 10px; font-weight: 600; color: #fff; }
+  .dark-card-year { font-size: 9px; color: #64748B; margin-top: 2px; }
+  .dark-genre { display: inline-block; background: #1E2A5A; border-radius: 20px; padding: 2px 7px; font-size: 9px; color: #64748B; margin-top: 4px; margin-right: 3px; }
+  .dark-toggle { background: #121840; border: 1px solid #1E2A5A; border-radius: 6px; padding: 3px 8px; color: #64748B; font-size: 10px; cursor: pointer; }
+
+  /* --- LIGHT PANEL --- */
+  .light-panel { background: #FFFFFF; }
+  .light-nav {
+    background: rgba(255,255,255,0.9);
+    border-bottom: 1px solid #E5E7EB;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .light-logo { font-size: 22px; font-weight: 700; letter-spacing: 0.1em; display: flex; align-items: center; gap: 8px; }
+  .light-play {
+    font-size: 20px;
+    background: linear-gradient(135deg, #2EC7FF, #8A4DFF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .light-wordmark {
+    background: linear-gradient(90deg, #2EC7FF, #8A4DFF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .light-nav-links { display: flex; gap: 16px; align-items: center; }
+  .light-nav-link { color: #6B7280; font-size: 12px; }
+  .light-search { background: #F9F9FB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 4px 10px; color: #6B7280; font-size: 11px; }
+  .light-body { padding: 16px; }
+  .light-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .light-stat { background: #F9F9FB; border: 1px solid #E5E7EB; border-radius: 10px; padding: 10px; text-align: center; }
+  .light-stat-val { font-size: 18px; font-weight: 700; color: #8A4DFF; }
+  .light-stat-label { font-size: 10px; color: #6B7280; margin-top: 2px; }
+  .light-section-title { color: #0B0F2A; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .light-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .light-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: all 0.2s;
+  }
+  .light-card:hover { border-color: #8A4DFF; box-shadow: 0 4px 12px rgba(138,77,255,0.15); transform: translateY(-3px); }
+  .light-poster { aspect-ratio: 2/3; background: linear-gradient(135deg, #F3F0FF, #EEF2FF); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #E5E7EB; font-weight: 900; }
+  .light-card-body { padding: 6px 8px; }
+  .light-card-title { font-size: 10px; font-weight: 600; color: #0B0F2A; }
+  .light-card-year { font-size: 9px; color: #6B7280; margin-top: 2px; }
+  .light-genre { display: inline-block; background: #F3F0FF; border-radius: 20px; padding: 2px 7px; font-size: 9px; color: #8A4DFF; margin-top: 4px; margin-right: 3px; }
+  .light-toggle { background: #F9F9FB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 3px 8px; color: #6B7280; font-size: 10px; cursor: pointer; }
+</style>
+
+<div class="split-preview">
+  <!-- DARK -->
+  <div class="mode-panel dark-panel" data-choice="dark" onclick="toggleSelect(this)">
+    <div class="dark-nav">
+      <div class="dark-logo">
+        <span class="dark-play">▶</span>
+        <span class="dark-wordmark">MovieNexus</span>
+      </div>
+      <div class="dark-nav-links">
+        <span class="dark-nav-link">Movies</span>
+        <span class="dark-nav-link">TV Shows</span>
+        <span class="dark-search">🔍 Search...</span>
+        <span class="dark-toggle">☀ Light</span>
+      </div>
+    </div>
+    <div class="dark-body">
+      <div class="dark-stats">
+        <div class="dark-stat"><div class="dark-stat-val">20</div><div class="dark-stat-label">Movies</div></div>
+        <div class="dark-stat"><div class="dark-stat-val">1</div><div class="dark-stat-label">TV Shows</div></div>
+        <div class="dark-stat"><div class="dark-stat-val">7.4</div><div class="dark-stat-label">Avg Rating</div></div>
+      </div>
+      <div class="dark-section-title">Recent Movies</div>
+      <div class="dark-cards">
+        <div class="dark-card"><div class="dark-poster">M</div><div class="dark-card-body"><div class="dark-card-title">The Dark Knight</div><div class="dark-card-year">2008</div><span class="dark-genre">Action</span></div></div>
+        <div class="dark-card"><div class="dark-poster">I</div><div class="dark-card-body"><div class="dark-card-title">Inception</div><div class="dark-card-year">2010</div><span class="dark-genre">Sci-Fi</span></div></div>
+        <div class="dark-card"><div class="dark-poster">D</div><div class="dark-card-body"><div class="dark-card-title">Dune</div><div class="dark-card-year">2021</div><span class="dark-genre">Drama</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHT -->
+  <div class="mode-panel light-panel" data-choice="light" onclick="toggleSelect(this)">
+    <div class="light-nav">
+      <div class="light-logo">
+        <span class="light-play">▶</span>
+        <span class="light-wordmark">MovieNexus</span>
+      </div>
+      <div class="light-nav-links">
+        <span class="light-nav-link">Movies</span>
+        <span class="light-nav-link">TV Shows</span>
+        <span class="light-search">🔍 Search...</span>
+        <span class="light-toggle">🌙 Dark</span>
+      </div>
+    </div>
+    <div class="light-body">
+      <div class="light-stats">
+        <div class="light-stat"><div class="light-stat-val">20</div><div class="light-stat-label">Movies</div></div>
+        <div class="light-stat"><div class="light-stat-val">1</div><div class="light-stat-label">TV Shows</div></div>
+        <div class="light-stat"><div class="light-stat-val">7.4</div><div class="light-stat-label">Avg Rating</div></div>
+      </div>
+      <div class="light-section-title">Recent Movies</div>
+      <div class="light-cards">
+        <div class="light-card"><div class="light-poster">M</div><div class="light-card-body"><div class="light-card-title">The Dark Knight</div><div class="light-card-year">2008</div><span class="light-genre">Action</span></div></div>
+        <div class="light-card"><div class="light-poster">I</div><div class="light-card-body"><div class="light-card-title">Inception</div><div class="light-card-year">2010</div><span class="light-genre">Sci-Fi</span></div></div>
+        <div class="light-card"><div class="light-poster">D</div><div class="light-card-body"><div class="light-card-title">Dune</div><div class="light-card-year">2021</div><span class="light-genre">Drama</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px;text-align:center">Which should be the default when users first visit? (They can toggle either way)</p>

@@ -1,0 +1,66 @@
+<h2>Which cinema symbol?</h2>
+<p class="subtitle">Each rendered with the cyan-to-purple brand gradient — same CSS technique as Login X's ♠</p>
+
+<style>
+  .logo-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 24px 16px;
+  }
+  .logo-symbol {
+    font-size: 80px;
+    line-height: 1;
+    background: linear-gradient(135deg, #2EC7FF, #8A4DFF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 12px rgba(46,199,255,0.5));
+  }
+  .logo-wordmark {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    background: linear-gradient(90deg, #2EC7FF, #8A4DFF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+</style>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <div class="logo-preview">
+        <span class="logo-symbol">▶</span>
+        <span class="logo-wordmark">MOVIENEXUS</span>
+      </div>
+      <h3>Play button ▶</h3>
+      <p>Universal "watch" symbol. Clean, instantly recognizable. Simple shape works great with the gradient.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <div class="logo-preview">
+        <span class="logo-symbol">🎬</span>
+        <span class="logo-wordmark">MOVIENEXUS</span>
+      </div>
+      <h3>Clapperboard 🎬</h3>
+      <p>Classic film production icon. More personality, strong movie association. Emoji renders differently by platform but gradient is applied to the container glow.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <div class="logo-preview">
+        <span class="logo-symbol">✦</span>
+        <span class="logo-wordmark">MOVIENEXUS</span>
+      </div>
+      <h3>Star / sparkle ✦</h3>
+      <p>Evokes "star ratings" and cinema glamour. Pure Unicode, renders crisply. Gradient fill works perfectly — similar to the Login X spade approach.</p>
+    </div>
+  </div>
+</div>

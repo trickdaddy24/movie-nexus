@@ -11,7 +11,7 @@ class Movie(Base):
     __tablename__ = "movies"
 
     id = Column(Integer, primary_key=True)
-    nexus_id = Column(String(12), unique=True, nullable=False, index=True)
+    nexus_id = Column(String(20), unique=True, nullable=False, index=True)
     tmdb_id = Column(Integer, unique=True, index=True)
     imdb_id = Column(String(15), index=True)
     title = Column(Text, nullable=False)
@@ -44,7 +44,7 @@ class TVShow(Base):
     __tablename__ = "tv_shows"
 
     id = Column(Integer, primary_key=True)
-    nexus_id = Column(String(12), unique=True, nullable=False, index=True)
+    nexus_id = Column(String(20), unique=True, nullable=False, index=True)
     tmdb_id = Column(Integer, unique=True, index=True)
     tvdb_id = Column(Integer, index=True)
     imdb_id = Column(String(15), index=True)
@@ -98,7 +98,7 @@ class Episode(Base):
     __tablename__ = "episodes"
 
     id = Column(Integer, primary_key=True)
-    nexus_id = Column(String(14), unique=True, nullable=False, index=True)
+    nexus_id = Column(String(20), unique=True, nullable=False, index=True)
     season_id = Column(Integer, ForeignKey("seasons.id", ondelete="CASCADE"), nullable=False)
     show_id = Column(Integer, ForeignKey("tv_shows.id", ondelete="CASCADE"), nullable=False)
     tmdb_id = Column(Integer, index=True)
@@ -165,6 +165,9 @@ class Artwork(Base):
     url = Column(Text, nullable=False)
     language = Column(String(5))
     likes = Column(Integer, default=0)
+    hash = Column(String(64))          # SHA-256 hex digest of image bytes
+    width = Column(Integer)            # pixels
+    height = Column(Integer)           # pixels
 
     __table_args__ = (
         Index("ix_artwork_media", "media_type", "media_id"),
@@ -243,3 +246,19 @@ class ImportSession(Base):
     skipped = Column(Integer, default=0)
     failed = Column(Integer, default=0)
     status = Column(String(20), default="running")
+
+
+class TrendingSnapshot(Base):
+    __tablename__ = "trending_snapshots"
+
+    id = Column(Integer, primary_key=True)
+    nexus_id = Column(String(20), nullable=False, index=True)
+    media_type = Column(String(10), nullable=False)   # movie/show/anime
+    window = Column(String(10), nullable=False)        # daily/weekly/alltime
+    rank = Column(Integer, nullable=False)
+    watcher_count = Column(Integer, default=0)
+    snapshot_date = Column(Date, nullable=False)
+
+    __table_args__ = (
+        Index("ix_trending_date_type_window", "snapshot_date", "media_type", "window"),
+    )
