@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     plex_token: str = ""
     secret_key: str = "changeme"
     debug: bool = False
+    telegram_bot_token: str = ""   # e.g. 123456:ABC-DEF...
+    telegram_chat_id: str = ""     # e.g. -1001234567890
 
     model_config = {"env_file": ".env"}
 
