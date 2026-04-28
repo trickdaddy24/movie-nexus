@@ -5,6 +5,8 @@ import "./globals.css";
 import SearchBar from "@/components/SearchBar";
 import LogoBrand from "@/components/LogoBrand";
 import ThemeToggle from "@/components/ThemeToggle";
+import SessionWrapper from "@/components/SessionWrapper";
+import SignOutButton from "@/components/SignOutButton";
 
 export const metadata: Metadata = {
   title: "MovieNexus",
@@ -16,36 +18,39 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen transition-colors">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          <nav className="sticky top-0 z-50 border-b border-nexus-border dark:border-[#1E2A5A] bg-white/90 dark:bg-[#0B0F2A]/90 backdrop-blur-md">
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-              <Link href="/">
-                <LogoBrand />
-              </Link>
-              <div className="flex items-center gap-6">
-                <Link
-                  href="/movies"
-                  className="text-sm text-nexus-muted hover:text-nexus-text dark:hover:text-white transition"
-                >
-                  Movies
+          <SessionWrapper>
+            <nav className="sticky top-0 z-50 border-b border-nexus-border dark:border-[#1E2A5A] bg-white/90 dark:bg-[#0B0F2A]/90 backdrop-blur-md">
+              <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+                <Link href="/">
+                  <LogoBrand />
                 </Link>
-                <Link
-                  href="/shows"
-                  className="text-sm text-nexus-muted hover:text-nexus-text dark:hover:text-white transition"
-                >
-                  TV Shows
-                </Link>
-                <Link
-                  href="/admin"
-                  className="text-sm text-nexus-muted hover:text-nexus-text dark:hover:text-white transition"
-                >
-                  Admin
-                </Link>
-                <SearchBar />
-                <ThemeToggle />
+                <div className="flex items-center gap-6">
+                  <Link
+                    href="/movies"
+                    className="text-sm text-nexus-muted hover:text-nexus-text dark:hover:text-white transition"
+                  >
+                    Movies
+                  </Link>
+                  <Link
+                    href="/shows"
+                    className="text-sm text-nexus-muted hover:text-nexus-text dark:hover:text-white transition"
+                  >
+                    TV Shows
+                  </Link>
+                  <Link
+                    href="/admin"
+                    className="text-sm text-nexus-muted hover:text-nexus-text dark:hover:text-white transition"
+                  >
+                    Admin
+                  </Link>
+                  <SearchBar />
+                  <ThemeToggle />
+                  <SignOutButton />
+                </div>
               </div>
-            </div>
-          </nav>
-          <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+            </nav>
+            <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+          </SessionWrapper>
         </ThemeProvider>
       </body>
     </html>

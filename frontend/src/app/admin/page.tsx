@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { signOut } from "next-auth/react";
 import {
   getImportSessions,
   startBulkImport,
@@ -173,15 +172,7 @@ export default function AdminPage() {
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8 space-y-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin</h1>
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-nexus-border text-gray-600 dark:text-gray-300 text-xs hover:border-red-400 hover:text-red-500 transition-colors"
-        >
-          Sign out
-        </button>
-      </div>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin</h1>
 
       {/* Live Monitor */}
       <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
