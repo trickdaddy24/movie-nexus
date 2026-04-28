@@ -81,6 +81,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: https://movienexus.e4z.xyz/api
       AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_TRUST_HOST: "true"
       AUTH_DATABASE_URL: file:/app/prisma/nexus_admin.db
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://movienexus.e4z.xyz}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
