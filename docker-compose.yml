@@ -97,6 +97,7 @@ services:
       - saltbox
     labels:
       - "traefik.enable=true"
+      # Main frontend router (all non-/api routes)
       - "traefik.http.routers.movienexus-web-http.entrypoints=web"
       - "traefik.http.routers.movienexus-web-http.middlewares=globalHeaders@file,redirect-to-https@docker,robotHeaders@file"
       - "traefik.http.routers.movienexus-web-http.rule=Host(`movienexus.e4z.xyz`)"
@@ -108,6 +109,18 @@ services:
       - "traefik.http.routers.movienexus-web.tls=true"
       - "traefik.http.routers.movienexus-web.tls.certresolver=cfdns"
       - "traefik.http.routers.movienexus-web.tls.domains[0].main=e4z.xyz"
+      # Auth router — /api/auth/* must reach Next.js, not FastAPI (longer rule wins)
+      - "traefik.http.routers.movienexus-auth-http.entrypoints=web"
+      - "traefik.http.routers.movienexus-auth-http.middlewares=globalHeaders@file,redirect-to-https@docker,robotHeaders@file"
+      - "traefik.http.routers.movienexus-auth-http.rule=Host(`movienexus.e4z.xyz`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.movienexus-auth-http.service=movienexus-web-http"
+      - "traefik.http.routers.movienexus-auth.entrypoints=websecure"
+      - "traefik.http.routers.movienexus-auth.middlewares=globalHeaders@file,secureHeaders@file,robotHeaders@file"
+      - "traefik.http.routers.movienexus-auth.rule=Host(`movienexus.e4z.xyz`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.movienexus-auth.service=movienexus-web"
+      - "traefik.http.routers.movienexus-auth.tls=true"
+      - "traefik.http.routers.movienexus-auth.tls.certresolver=cfdns"
+      - "traefik.http.routers.movienexus-auth.tls.domains[0].main=e4z.xyz"
       - "traefik.http.routers.movienexus-web.tls.domains[0].sans=*.e4z.xyz"
       - "traefik.http.routers.movienexus-web.tls.options=securetls@file"
       - "traefik.http.services.movienexus-web-http.loadbalancer.server.port=3000"
