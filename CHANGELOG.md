@@ -39,6 +39,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API key management UI
 - Admin panel
 
+## [0.5.0] — 2026-04-27
+
+### Added
+- Auth.js v5 + Prisma + SQLite admin authentication (Login X model)
+- Hidden superadmin — env-only credentials, never stored in database
+- Next.js middleware protecting all /admin routes → /login redirect
+- Login page with MovieNexus nexus theme (dark/light mode)
+- ImportLog PostgreSQL table — per-record import failure tracking
+- In-memory circular log buffer (deque 1000 lines) in backend
+- GET /api/admin/logs — paginated per-record error logs with session_id filter
+- GET /api/admin/logs/stream — SSE stream of live backend log output
+- Import Error Logs section on admin page (filterable by session ID)
+- Live Backend Logs section on admin page (terminal-style dark pane)
+
 ## [0.4.0] — 2026-04-27
 
 ### Added

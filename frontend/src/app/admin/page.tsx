@@ -5,8 +5,10 @@ import {
   getImportSessions,
   startBulkImport,
   verifyArtwork,
+  getImportLogs,
   ImportSessionSummary,
   ArtworkVerifyResult,
+  ImportLogEntry,
 } from "@/lib/api";
 
 const API_URL =
@@ -29,13 +31,22 @@ export default function AdminPage() {
   const [startStatus, setStartStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [logs, setLogs] = useState<ImportLogEntry[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logSession, setLogSession] = useState<number | undefined>(undefined);
+  const [liveLogLines, setLiveLogLines] = useState<string[]>([]);
+  const logStreamRef = useRef<EventSource | null>(null);
+
   const sseRef = useRef<EventSource | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const initialProcessedRef = useRef<number>(0);
 
   useEffect(() => {
     loadSessions();
-    return () => sseRef.current?.close();
+    return () => {
+      sseRef.current?.close();
+      logStreamRef.current?.close();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -87,6 +98,29 @@ export default function AdminPage() {
     es.onerror = () => {
       es.close();
       sseRef.current = null;
+    };
+  }
+
+  async function loadLogs(session_id?: number) {
+    setLogsLoading(true);
+    try {
+      setLogs(await getImportLogs(session_id, 100));
+    } finally {
+      setLogsLoading(false);
+    }
+  }
+
+  function connectLogStream() {
+    if (logStreamRef.current) logStreamRef.current.close();
+    const es = new EventSource(`${API_URL}/admin/logs/stream`);
+    logStreamRef.current = es;
+    es.addEventListener("log", (e) => {
+      const d = JSON.parse((e as MessageEvent).data);
+      setLiveLogLines((prev) => [...prev.slice(-199), d.line]);
+    });
+    es.onerror = () => {
+      es.close();
+      logStreamRef.current = null;
     };
   }
 
@@ -328,6 +362,94 @@ export default function AdminPage() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* Import Error Logs */}
+      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Import Error Logs</h2>
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              placeholder="Session ID"
+              value={logSession ?? ""}
+              onChange={(e) => setLogSession(e.target.value ? parseInt(e.target.value) : undefined)}
+              className="w-28 rounded-lg border border-gray-300 dark:border-nexus-border bg-white dark:bg-nexus-bg text-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs"
+            />
+            <button
+              onClick={() => loadLogs(logSession)}
+              disabled={logsLoading}
+              className="px-3 py-1.5 rounded-lg bg-nexus-accent text-white text-xs font-medium hover:opacity-90 disabled:opacity-50"
+            >
+              {logsLoading ? "Loading…" : "Load Logs"}
+            </button>
+          </div>
+        </div>
+        {logs.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No logs loaded. Enter a session ID and click Load Logs.</p>
+        ) : (
+          <div className="space-y-1 max-h-80 overflow-y-auto font-mono text-xs">
+            {logs.map((l) => (
+              <div
+                key={l.id}
+                className={`flex gap-3 px-3 py-1.5 rounded ${
+                  l.level === "error"
+                    ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                    : l.level === "warning"
+                    ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                    : "bg-gray-100 dark:bg-nexus-border/30 text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                <span className="shrink-0 text-gray-400">{l.tmdb_id ?? "—"}</span>
+                <span className="truncate flex-1">{l.message}</span>
+                <span className="shrink-0 text-gray-400">
+                  {l.created_at ? new Date(l.created_at).toLocaleTimeString() : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Live Backend Logs */}
+      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Live Backend Logs</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={connectLogStream}
+              className="px-3 py-1.5 rounded-lg bg-nexus-accent text-white text-xs font-medium hover:opacity-90"
+            >
+              Connect
+            </button>
+            <button
+              onClick={() => setLiveLogLines([])}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-nexus-border text-gray-600 dark:text-gray-300 text-xs hover:border-nexus-accent"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+        <div className="bg-gray-950 rounded-lg p-3 h-64 overflow-y-auto font-mono text-xs space-y-0.5">
+          {liveLogLines.length === 0 ? (
+            <p className="text-gray-500">Click Connect to start streaming…</p>
+          ) : (
+            liveLogLines.map((line, i) => (
+              <div
+                key={i}
+                className={
+                  line.includes("ERROR")
+                    ? "text-red-400"
+                    : line.includes("WARNING")
+                    ? "text-yellow-400"
+                    : "text-green-400"
+                }
+              >
+                {line}
+              </div>
+            ))
+          )}
+        </div>
       </section>
     </main>
   );

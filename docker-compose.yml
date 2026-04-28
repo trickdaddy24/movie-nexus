@@ -80,10 +80,19 @@ services:
     container_name: movienexus-frontend
     environment:
       NEXT_PUBLIC_API_URL: https://movienexus.e4z.xyz/api
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_DATABASE_URL: file:/app/prisma/nexus_admin.db
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://movienexus.e4z.xyz}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
     ports:
       - "3210:3000"
     depends_on:
       - backend
+    volumes:
+      - movienexus_auth_data:/app/prisma
     networks:
       - saltbox
     labels:
@@ -107,6 +116,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  movienexus_auth_data:
 
 networks:
   saltbox:

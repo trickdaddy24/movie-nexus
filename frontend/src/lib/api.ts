@@ -218,3 +218,24 @@ export async function verifyArtwork(
     `/admin/artwork/verify?media_type=${media_type}&sample=${sample}`
   );
 }
+
+// --- Import Logs ---
+
+export interface ImportLogEntry {
+  id: number;
+  session_id: number;
+  tmdb_id: number | null;
+  media_type: string | null;
+  level: string;
+  message: string;
+  created_at: string | null;
+}
+
+export async function getImportLogs(
+  session_id?: number,
+  limit = 100
+): Promise<ImportLogEntry[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (session_id !== undefined) params.set("session_id", String(session_id));
+  return fetchAPI<ImportLogEntry[]>(`/admin/logs?${params}`);
+}

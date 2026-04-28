@@ -262,3 +262,19 @@ class TrendingSnapshot(Base):
     __table_args__ = (
         Index("ix_trending_date_type_window", "snapshot_date", "media_type", "window"),
     )
+
+
+class ImportLog(Base):
+    __tablename__ = "import_logs"
+
+    id = Column(Integer, primary_key=True)
+    session_id = Column(Integer, ForeignKey("import_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    tmdb_id = Column(Integer)
+    media_type = Column(String(10))
+    level = Column(String(10), default="error")   # error / warning / info
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_import_logs_session_created", "session_id", "created_at"),
+    )

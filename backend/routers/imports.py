@@ -11,7 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 from database import get_db, async_session
 from models import (
     Movie, TVShow, Season, Episode, Person, Credit, Genre, ShowGenre,
-    Artwork, Studio, MediaStudio, ExternalID, ImportSession,
+    Artwork, Studio, MediaStudio, ExternalID, ImportSession, ImportLog,
 )
 from nexus_id import generate_nexus_id
 from api.tmdb import tmdb_client
@@ -286,8 +286,20 @@ async def _run_import(session_id: int, media_type: str, tmdb_ids: list[int]):
 
             except Exception as e:
                 progress["failed"] += 1
-                progress["current_title"] = f"FAILED: TMDb #{tmdb_id} ({e})"
-                logger.error(f"Import failed for TMDb {tmdb_id}: {e}")
+                err_msg = f"{type(e).__name__}: {e}"
+                progress["current_title"] = f"FAILED: TMDb #{tmdb_id} ({err_msg})"
+                logger.error(f"Import failed for TMDb {tmdb_id}: {err_msg}")
+                try:
+                    db.add(ImportLog(
+                        session_id=session_id,
+                        tmdb_id=tmdb_id,
+                        media_type=media_type,
+                        level="error",
+                        message=err_msg,
+                    ))
+                    await db.commit()
+                except Exception:
+                    pass
 
             await asyncio.sleep(0.25)
 
@@ -346,7 +358,19 @@ async def _run_bulk_crawl(session_id: int, media_type: str, total_pages: int):
                 except Exception as e:
                     failed_total += 1
                     progress["failed"] += 1
-                    logger.error(f"Bulk import failed for {tmdb_id}: {e}")
+                    err_msg = f"{type(e).__name__}: {e}"
+                    logger.error(f"Bulk import failed for TMDb {tmdb_id}: {err_msg}")
+                    try:
+                        db.add(ImportLog(
+                            session_id=session_id,
+                            tmdb_id=tmdb_id,
+                            media_type=media_type,
+                            level="error",
+                            message=err_msg,
+                        ))
+                        await db.commit()
+                    except Exception:
+                        pass
 
             # Notify every 10k imported records
             total_processed = imported_total + skipped_total

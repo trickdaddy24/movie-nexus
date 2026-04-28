@@ -1,3 +1,4 @@
+import collections
 import logging
 import re as _re
 from contextlib import asynccontextmanager
@@ -16,7 +17,25 @@ from scheduler import scheduler, setup_scheduler
 from routers import movies, shows, imports, search, export, stats
 from routers import trending, admin
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+# In-memory circular log buffer — last 1000 lines, streamed to admin UI
+_LOG_BUFFER: collections.deque = collections.deque(maxlen=1000)
+
+class _BufferHandler(logging.Handler):
+    def emit(self, record: logging.LogRecord) -> None:
+        _LOG_BUFFER.append(self.format(record))
+
+_fmt = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+_buf_handler = _BufferHandler()
+_buf_handler.setFormatter(_fmt)
+_stream_handler = logging.StreamHandler()
+_stream_handler.setFormatter(_fmt)
+logging.root.setLevel(logging.INFO)
+logging.root.addHandler(_buf_handler)
+logging.root.addHandler(_stream_handler)
+
+# Exported for SSE streaming in admin router
+log_buffer = _LOG_BUFFER
+
 logger = logging.getLogger("movienexus")
 
 

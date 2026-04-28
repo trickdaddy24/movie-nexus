@@ -1,4 +1,5 @@
 # backend/routers/admin.py
+import asyncio
 import csv
 import hashlib
 import io
@@ -12,12 +13,13 @@ from pathlib import Path
 import httpx
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
+from sse_starlette.sse import EventSourceResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db, async_session
-from models import Artwork, Genre, Movie, ShowGenre, TVShow
+from models import Artwork, Genre, ImportLog, Movie, ShowGenre, TVShow
 from api.telegram import send_telegram
 
 logger = logging.getLogger(__name__)
@@ -299,3 +301,53 @@ async def run_nightly_backup() -> None:
         f"Files: movies.json, movies.csv, movies.xml, shows.json, shows.csv, shows.xml"
     )
     logger.info(f"Nightly backup written to {backup_dir}")
+
+
+@router.get("/logs")
+async def get_import_logs(
+    session_id: int | None = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return recent per-record import error logs."""
+    q = select(ImportLog).order_by(ImportLog.created_at.desc()).limit(limit)
+    if session_id is not None:
+        q = q.where(ImportLog.session_id == session_id)
+    result = await db.execute(q)
+    rows = result.scalars().all()
+    return [
+        {
+            "id": r.id,
+            "session_id": r.session_id,
+            "tmdb_id": r.tmdb_id,
+            "media_type": r.media_type,
+            "level": r.level,
+            "message": r.message,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/logs/stream")
+async def stream_logs():
+    """SSE stream of the in-memory backend log buffer."""
+    from main import log_buffer
+
+    async def event_stream():
+        # Send last 100 buffered lines immediately on connect
+        snapshot = list(log_buffer)[-100:]
+        for line in snapshot:
+            yield {"event": "log", "data": json.dumps({"line": line})}
+        # Then stream new lines as they arrive
+        seen = len(log_buffer)
+        while True:
+            current = len(log_buffer)
+            if current > seen:
+                new_lines = list(log_buffer)[seen:current]
+                for line in new_lines:
+                    yield {"event": "log", "data": json.dumps({"line": line})}
+                seen = current
+            await asyncio.sleep(0.5)
+
+    return EventSourceResponse(event_stream())
