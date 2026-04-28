@@ -8,7 +8,11 @@ body {
 }
 
 .dark body {
-  background: #0b0f2a;
+  background-color: #0b0f2a;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
   color: #ffffff;
 }
 
@@ -44,4 +48,36 @@ body {
 @keyframes gradient-flow {
   0%   { background-position: 0% 50%; }
   100% { background-position: 100% 50%; }
+}
+
+/* ── Minus One Labs background blobs ── */
+.mol-blob-tr {
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 55vw;
+  height: 55vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(138,77,255,0.06) 0%, transparent 70%);
+}
+.mol-blob-bl {
+  position: absolute;
+  bottom: -10%;
+  left: -10%;
+  width: 45vw;
+  height: 45vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(46,199,255,0.05) 0%, transparent 70%);
+}
+.dark .mol-blob-tr {
+  background: radial-gradient(circle, rgba(138,77,255,0.18) 0%, transparent 70%);
+  animation: mol-blob-pulse 7s ease-in-out infinite alternate;
+}
+.dark .mol-blob-bl {
+  background: radial-gradient(circle, rgba(46,199,255,0.12) 0%, transparent 70%);
+  animation: mol-blob-pulse 8s ease-in-out infinite alternate-reverse;
+}
+@keyframes mol-blob-pulse {
+  0%   { opacity: 0.7; transform: scale(1); }
+  100% { opacity: 1;   transform: scale(1.1); }
 }

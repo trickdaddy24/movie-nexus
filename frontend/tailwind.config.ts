@@ -17,6 +17,10 @@ const config: Config = {
           cyan: "#2EC7FF",
         },
       },
+      fontFamily: {
+        sans: ["var(--font-geist-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
+      },
     },
   },
   plugins: [],
