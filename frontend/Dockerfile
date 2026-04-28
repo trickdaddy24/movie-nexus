@@ -17,7 +17,9 @@ RUN npx prisma generate
 RUN npm run build
 # Copy Prisma client binary into standalone output
 RUN cp -r node_modules/.prisma .next/standalone/node_modules/.prisma 2>/dev/null || true
-RUN mkdir -p .next/standalone/node_modules/@prisma && cp -r node_modules/@prisma/client .next/standalone/node_modules/@prisma/client 2>/dev/null || true
+RUN mkdir -p .next/standalone/node_modules/@prisma \
+  && cp -r node_modules/@prisma/client .next/standalone/node_modules/@prisma/client 2>/dev/null || true \
+  && cp -r node_modules/@prisma/engines .next/standalone/node_modules/@prisma/engines 2>/dev/null || true
 RUN mkdir -p .next/standalone/node_modules/prisma && cp -r node_modules/prisma/. .next/standalone/node_modules/prisma/ 2>/dev/null || true
 
 FROM node:20-alpine AS runner
@@ -36,4 +38,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Push Prisma schema (creates/migrates SQLite DB) then start Next.js
-CMD ["sh", "-c", "node_modules/.bin/prisma db push --schema=./prisma/schema.prisma --skip-generate 2>&1 || true && node server.js"]
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --schema=./prisma/schema.prisma --skip-generate 2>&1 || true && node server.js"]
