@@ -1,0 +1,334 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  getImportSessions,
+  startBulkImport,
+  verifyArtwork,
+  ImportSessionSummary,
+  ArtworkVerifyResult,
+} from "@/lib/api";
+
+const API_URL =
+  typeof window !== "undefined"
+    ? process.env.NEXT_PUBLIC_API_URL || "/api"
+    : "/api";
+
+export default function AdminPage() {
+  const [sessions, setSessions] = useState<ImportSessionSummary[]>([]);
+  const [liveProgress, setLiveProgress] = useState<{
+    imported: number;
+    skipped: number;
+    failed: number;
+    total: number;
+    current_title?: string;
+  } | null>(null);
+  const [artworkResults, setArtworkResults] = useState<ArtworkVerifyResult[]>([]);
+  const [artworkLoading, setArtworkLoading] = useState(false);
+  const [startForm, setStartForm] = useState({ media_type: "movie", pages: 100 });
+  const [startStatus, setStartStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const sseRef = useRef<EventSource | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const initialProcessedRef = useRef<number>(0);
+
+  useEffect(() => {
+    loadSessions();
+    return () => sseRef.current?.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function loadSessions() {
+    setLoading(true);
+    try {
+      const data = await getImportSessions(20);
+      setSessions(data);
+      const live = data.find((s) => s.is_live);
+      if (live) connectSSE(live.id);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function connectSSE(sessionId: number) {
+    if (sseRef.current) sseRef.current.close();
+    startTimeRef.current = null;
+    initialProcessedRef.current = 0;
+
+    const es = new EventSource(`${API_URL}/import/progress/${sessionId}`);
+    sseRef.current = es;
+
+    es.addEventListener("progress", (e) => {
+      const d = JSON.parse((e as MessageEvent).data);
+      const imported = d.imported ?? 0;
+      const skipped = d.skipped ?? 0;
+      const failed = d.failed ?? 0;
+      const processed = imported + skipped + failed;
+      if (startTimeRef.current === null && processed > 0) {
+        startTimeRef.current = Date.now();
+        initialProcessedRef.current = processed;
+      }
+      setLiveProgress({
+        imported,
+        skipped,
+        failed,
+        total: d.total ?? 0,
+        current_title: d.current_title,
+      });
+    });
+
+    es.addEventListener("complete", () => {
+      es.close();
+      sseRef.current = null;
+      loadSessions();
+    });
+
+    es.onerror = () => {
+      es.close();
+      sseRef.current = null;
+    };
+  }
+
+  function calcEta(): string | null {
+    if (!liveProgress || !startTimeRef.current) return null;
+    const elapsed = (Date.now() - startTimeRef.current) / 1000;
+    const processed = liveProgress.imported + liveProgress.skipped + liveProgress.failed;
+    const done = processed - initialProcessedRef.current;
+    if (done <= 0 || elapsed <= 0) return null;
+    const rate = done / elapsed;
+    const remaining = liveProgress.total - processed;
+    if (remaining <= 0) return "finishing…";
+    const secs = Math.round(remaining / rate);
+    if (secs < 60) return `~${secs}s`;
+    if (secs < 3600) return `~${Math.round(secs / 60)}m`;
+    return `~${(secs / 3600).toFixed(1)}h`;
+  }
+
+  async function handleStart() {
+    setStartStatus("Starting…");
+    try {
+      const res = await startBulkImport(
+        startForm.media_type as "movie" | "show",
+        startForm.pages
+      );
+      setStartStatus(`Started — session #${res.session_id}`);
+      await loadSessions();
+    } catch (err: unknown) {
+      setStartStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function handleVerifyArtwork(media_type: string) {
+    setArtworkLoading(true);
+    try {
+      setArtworkResults(await verifyArtwork(media_type, 50));
+    } finally {
+      setArtworkLoading(false);
+    }
+  }
+
+  const processed = liveProgress
+    ? liveProgress.imported + liveProgress.skipped + liveProgress.failed
+    : 0;
+  const pct =
+    liveProgress && liveProgress.total > 0
+      ? Math.round((processed / liveProgress.total) * 100)
+      : 0;
+
+  return (
+    <main className="max-w-5xl mx-auto px-4 py-8 space-y-10">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin</h1>
+
+      {/* Live Monitor */}
+      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Live Import Monitor</h2>
+        {liveProgress ? (
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+              <span>{processed.toLocaleString()} / {liveProgress.total.toLocaleString()} records</span>
+              <span>{pct}%{calcEta() ? ` — ETA ${calcEta()}` : ""}</span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-nexus-border rounded-full h-3">
+              <div
+                className="bg-nexus-accent h-3 rounded-full transition-all duration-500"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-sm text-center">
+              <div>
+                <div className="font-bold text-green-500">{liveProgress.imported.toLocaleString()}</div>
+                <div className="text-gray-500 dark:text-gray-400">Added</div>
+              </div>
+              <div>
+                <div className="font-bold text-yellow-400">{liveProgress.skipped.toLocaleString()}</div>
+                <div className="text-gray-500 dark:text-gray-400">Skipped</div>
+              </div>
+              <div>
+                <div className="font-bold text-red-400">{liveProgress.failed.toLocaleString()}</div>
+                <div className="text-gray-500 dark:text-gray-400">Failed</div>
+              </div>
+            </div>
+            {liveProgress.current_title && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{liveProgress.current_title}</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No active import.</p>
+        )}
+      </section>
+
+      {/* Start Import */}
+      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Start Bulk Import</h2>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Media Type</label>
+            <select
+              value={startForm.media_type}
+              onChange={(e) => setStartForm({ ...startForm, media_type: e.target.value })}
+              className="rounded-lg border border-gray-300 dark:border-nexus-border bg-white dark:bg-nexus-bg text-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+            >
+              <option value="movie">Movies</option>
+              <option value="show">TV Shows</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Pages (1–5000)</label>
+            <input
+              type="number"
+              min={1}
+              max={5000}
+              value={startForm.pages}
+              onChange={(e) => setStartForm({ ...startForm, pages: parseInt(e.target.value) || 1 })}
+              className="w-28 rounded-lg border border-gray-300 dark:border-nexus-border bg-white dark:bg-nexus-bg text-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+            />
+          </div>
+          <button
+            onClick={handleStart}
+            className="px-5 py-2 rounded-lg bg-nexus-accent text-nexus-bg font-semibold text-sm hover:opacity-90 transition-opacity"
+          >
+            Start
+          </button>
+        </div>
+        {startStatus && <p className="text-sm text-gray-600 dark:text-gray-400">{startStatus}</p>}
+      </section>
+
+      {/* Session History */}
+      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Import History</h2>
+          <button onClick={loadSessions} className="text-xs text-nexus-accent hover:underline">
+            Refresh
+          </button>
+        </div>
+        {loading ? (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Loading…</p>
+        ) : sessions.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No sessions yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-nexus-border">
+                  <th className="pb-2 pr-4">ID</th>
+                  <th className="pb-2 pr-4">Type</th>
+                  <th className="pb-2 pr-4">Status</th>
+                  <th className="pb-2 pr-4">Processed</th>
+                  <th className="pb-2 pr-4">Added</th>
+                  <th className="pb-2">Started</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sessions.map((s) => (
+                  <tr
+                    key={s.id}
+                    onClick={() => s.is_live && connectSSE(s.id)}
+                    className="border-b border-gray-100 dark:border-nexus-border/50 hover:bg-gray-50 dark:hover:bg-nexus-border/20 cursor-pointer"
+                  >
+                    <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{s.id}</td>
+                    <td className="py-2 pr-4 text-gray-700 dark:text-gray-300 capitalize">{s.media_type}</td>
+                    <td className="py-2 pr-4">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          s.is_live
+                            ? "bg-green-500/20 text-green-400"
+                            : s.status === "completed"
+                            ? "bg-blue-500/20 text-blue-400"
+                            : "bg-gray-500/20 text-gray-400"
+                        }`}
+                      >
+                        {s.is_live ? "live" : s.status}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{s.processed.toLocaleString()}</td>
+                    <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{s.imported.toLocaleString()}</td>
+                    <td className="py-2 text-gray-500 dark:text-gray-400">
+                      {s.started_at ? new Date(s.started_at).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Export Downloads */}
+      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Export Database</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {(["json", "csv", "xml"] as const).flatMap((fmt) =>
+            (["movie", "show"] as const).map((mt) => (
+              <a
+                key={`${mt}-${fmt}`}
+                href={`${API_URL}/admin/export?format=${fmt}&media_type=${mt}`}
+                download
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-gray-200 dark:border-nexus-border hover:border-nexus-accent dark:hover:border-nexus-accent text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
+              >
+                <span className="uppercase text-nexus-accent font-bold">{fmt}</span>
+                <span className="capitalize">{mt === "show" ? "TV Shows" : "Movies"}</span>
+              </a>
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* Artwork Verify */}
+      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Artwork Verification</h2>
+        <div className="flex gap-3">
+          {(["movie", "show"] as const).map((mt) => (
+            <button
+              key={mt}
+              onClick={() => handleVerifyArtwork(mt)}
+              disabled={artworkLoading}
+              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-nexus-border text-sm text-gray-700 dark:text-gray-300 hover:border-nexus-accent dark:hover:border-nexus-accent transition-colors disabled:opacity-50"
+            >
+              {artworkLoading ? "Checking…" : `Check ${mt === "show" ? "TV" : "Movie"} Art`}
+            </button>
+          ))}
+        </div>
+        {artworkResults.length > 0 && (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {artworkResults.map((r) => (
+              <div
+                key={r.id}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs ${
+                  r.valid
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                    : "bg-red-500/10 text-red-600 dark:text-red-400"
+                }`}
+              >
+                <span className="font-mono">{r.id}</span>
+                <span className="truncate flex-1">{r.url}</span>
+                {r.width && r.height && <span>{r.width}×{r.height}</span>}
+                {r.reason && <span className="italic">{r.reason}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}

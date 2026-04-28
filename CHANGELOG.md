@@ -39,6 +39,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API key management UI
 - Admin panel
 
+## [0.4.0] — 2026-04-27
+
+### Added
+- Admin interface at `/admin`: live bulk import monitor with SSE progress bar + ETA
+- Import session history table with click-to-reconnect SSE on live sessions
+- One-click export downloads (JSON/CSV/XML × Movies/TV Shows) — 6 buttons
+- Artwork verification spot-check UI (sample=50 per media type)
+- Start Bulk Import form with media_type + pages controls
+- Admin nav link in header (between TV Shows and SearchBar)
+- `GET /api/import/sessions` endpoint — returns recent sessions merged with live `_active_jobs` data
+
 ## [0.3.0] — 2026-04-27
 
 ### Added

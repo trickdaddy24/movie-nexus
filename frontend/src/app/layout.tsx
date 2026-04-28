@@ -34,6 +34,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 >
                   TV Shows
                 </Link>
+                <Link
+                  href="/admin"
+                  className="text-sm text-nexus-muted hover:text-nexus-text dark:hover:text-white transition"
+                >
+                  Admin
+                </Link>
                 <SearchBar />
                 <ThemeToggle />
               </div>

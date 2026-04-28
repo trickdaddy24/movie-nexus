@@ -566,3 +566,36 @@ async def import_progress_sse(session_id: int):
             await asyncio.sleep(1)
 
     return EventSourceResponse(event_stream())
+
+
+@router.get("/sessions")
+async def list_import_sessions(
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return recent import sessions merged with live _active_jobs data."""
+    result = await db.execute(
+        select(ImportSession).order_by(ImportSession.started_at.desc()).limit(limit)
+    )
+    sessions = result.scalars().all()
+
+    rows = []
+    for s in sessions:
+        live = _active_jobs.get(s.id, {})
+        imported = live.get("imported", s.imported or 0)
+        skipped = live.get("skipped", s.skipped or 0)
+        failed = live.get("failed", s.failed or 0)
+        rows.append({
+            "id": s.id,
+            "media_type": s.media_type,
+            "status": live.get("status", s.status),
+            "total": live.get("total", s.total or 0),
+            "processed": imported + skipped + failed,
+            "imported": imported,
+            "skipped": skipped,
+            "failed": failed,
+            "started_at": s.started_at.isoformat() if s.started_at else None,
+            "finished_at": s.finished_at.isoformat() if s.finished_at else None,
+            "is_live": s.id in _active_jobs,
+        })
+    return rows
