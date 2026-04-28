@@ -2,6 +2,7 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json ./
 COPY prisma ./prisma
+RUN apk add --no-cache openssl
 RUN npm install
 RUN npx prisma generate
 
@@ -11,6 +12,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_API_URL=https://movienexus.e4z.xyz/api
+RUN apk add --no-cache openssl
 RUN npx prisma generate
 RUN npm run build
 # Copy Prisma client binary into standalone output
@@ -22,6 +24,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN apk add --no-cache openssl
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
