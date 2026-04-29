@@ -26,6 +26,10 @@ async def list_movies(
 ):
     query = select(Movie).options(selectinload(Movie.genres))
 
+    # Track whether a genre join was performed (need distinct to prevent duplicates)
+    _genre_join_categories = {"anime", "documentary", "kids"}
+    needs_distinct = bool(genre) or (category in _genre_join_categories)
+
     if genre:
         query = query.join(Genre).where(Genre.name.ilike(genre))
     if year:
@@ -42,7 +46,8 @@ async def list_movies(
         sort_col = getattr(Movie, sort)
         query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
 
-    query = query.distinct()  # prevent duplicates from multiple genre joins
+    if needs_distinct:
+        query = query.distinct()
 
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
@@ -77,6 +82,8 @@ async def list_movies(
             genres=[GenreOut(name=g.name) for g in m.genres],
             added_at=m.added_at,
             poster_url=poster_map.get(m.id),
+            origin_country=m.origin_country,
+            original_language=m.original_language,
         )
         for m in movies
     ]
@@ -126,6 +133,8 @@ async def get_movie(nexus_id: str, db: AsyncSession = Depends(get_db)):
         budget=movie.budget,
         revenue=movie.revenue,
         homepage=movie.homepage,
+        origin_country=movie.origin_country,
+        original_language=movie.original_language,
         genres=[GenreOut(name=g.name) for g in movie.genres],
         added_at=movie.added_at,
         updated_at=movie.updated_at,

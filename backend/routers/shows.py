@@ -29,6 +29,10 @@ async def list_shows(
 ):
     query = select(TVShow).options(selectinload(TVShow.show_genres))
 
+    # Track whether a genre join was performed (need distinct to prevent duplicates)
+    _genre_join_categories = {"anime", "documentary", "kids"}
+    needs_distinct = bool(genre) or (category in _genre_join_categories)
+
     if genre:
         query = query.join(ShowGenre).where(ShowGenre.name.ilike(genre))
     if status:
@@ -45,7 +49,8 @@ async def list_shows(
         sort_col = getattr(TVShow, sort)
         query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
 
-    query = query.distinct()  # prevent duplicates from multiple genre joins
+    if needs_distinct:
+        query = query.distinct()
 
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
@@ -82,6 +87,8 @@ async def list_shows(
             genres=[GenreOut(name=g.name) for g in s.show_genres],
             added_at=s.added_at,
             poster_url=poster_map.get(s.id),
+            origin_country=s.origin_country,
+            original_language=s.original_language,
         )
         for s in shows
     ]
@@ -169,6 +176,8 @@ async def get_show(nexus_id: str, db: AsyncSession = Depends(get_db)):
         content_rating=show.content_rating,
         popularity=show.popularity,
         homepage=show.homepage,
+        origin_country=show.origin_country,
+        original_language=show.original_language,
         genres=[GenreOut(name=g.name) for g in show.show_genres],
         added_at=show.added_at,
         updated_at=show.updated_at,

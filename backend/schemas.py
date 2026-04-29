@@ -77,6 +77,8 @@ class MovieBrief(BaseModel):
     genres: list[GenreOut] = []
     added_at: datetime | None = None
     poster_url: str | None = None
+    origin_country: str | None = None
+    original_language: str | None = None
 
 
 class MovieDetail(MovieBrief):
@@ -108,6 +110,8 @@ class TVShowBrief(BaseModel):
     genres: list[GenreOut] = []
     added_at: datetime | None = None
     poster_url: str | None = None
+    origin_country: str | None = None
+    original_language: str | None = None
 
 
 class TVShowDetail(TVShowBrief):
