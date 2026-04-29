@@ -7,14 +7,16 @@ const config: Config = {
     extend: {
       colors: {
         nexus: {
-          bg: "#FFFFFF",
-          card: "#F9F9FB",
-          border: "#E5E7EB",
-          accent: "#8A4DFF",
-          "accent-hover": "#7A3DEF",
-          muted: "#6B7280",
-          text: "#0B0F2A",
-          cyan: "#2EC7FF",
+          bg:             "#FFFFFF",
+          card:           "#FFF5F5",
+          border:         "#FFD6E8",
+          accent:         "#FF006E",
+          "accent-hover": "#E0005C",
+          secondary:      "#3BFF6B",
+          tertiary:       "#FFE600",
+          muted:          "#6B7280",
+          text:           "#111827",
+          cyan:           "#3BFF6B",
         },
       },
       fontFamily: {

@@ -37,9 +37,9 @@ export default function MediaCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col overflow-hidden rounded-xl border border-nexus-border bg-nexus-card transition-all duration-200 hover:border-nexus-accent hover:shadow-[0_4px_12px_rgba(138,77,255,0.15)] dark:bg-[#121840] dark:border-[#1E2A5A] dark:hover:border-[#00E0FF] dark:hover:shadow-[0_0_20px_rgba(0,224,255,0.35)]"
+      className="group flex flex-col overflow-hidden rounded-xl border border-nexus-border bg-nexus-card transition-all duration-200 hover:border-nexus-accent hover:shadow-[0_4px_12px_rgba(255,0,110,0.15)] dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:hover:border-[#5EFF8C] dark:hover:shadow-[0_0_20px_rgba(94,255,140,0.35)]"
     >
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#F3F0FF] dark:bg-[#1E2A5A]">
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#FFF5F5] dark:bg-[#2A2A2A]">
         {thumbUrl && !imgError ? (
           <img
             src={thumbUrl}
@@ -63,7 +63,7 @@ export default function MediaCard({
         <h3 className="text-sm font-semibold text-nexus-text line-clamp-2 group-hover:text-nexus-accent transition dark:text-white">
           {title}
         </h3>
-        <div className="flex items-center gap-2 text-xs text-nexus-muted dark:text-[#94A3B8]">
+        <div className="flex items-center gap-2 text-xs text-nexus-muted dark:text-[#A1A1A1]">
           {yearStr && <span>{yearStr}</span>}
           {subtitle && <span>{subtitle}</span>}
         </div>
@@ -90,7 +90,7 @@ export default function MediaCard({
             {genres.slice(0, 3).map((g) => (
               <span
                 key={g.name}
-                className="rounded-full bg-[#F3F0FF] px-2 py-0.5 text-[10px] text-[#8A4DFF] border border-[#E5E7EB] dark:bg-[#1E2A5A] dark:text-[#94A3B8] dark:border-[#2D3A6B]"
+                className="rounded-full bg-[#FFF5F5] px-2 py-0.5 text-[10px] text-[#FF006E] border border-[#FFD6E8] dark:bg-[#2A2A2A] dark:text-[#A1A1A1] dark:border-[#3A3A3A]"
               >
                 {g.name}
               </span>

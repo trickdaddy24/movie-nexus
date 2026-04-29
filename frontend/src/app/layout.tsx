@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <SessionWrapper>
-            <nav className="sticky top-0 z-50 border-b border-nexus-border dark:border-[#1E2A5A] bg-white/90 dark:bg-[#0B0F2A]/90 backdrop-blur-md">
+            <nav className="sticky top-0 z-50 border-b border-nexus-border dark:border-[#2A2A2A] bg-white/90 dark:bg-[#0F0F0F]/90 backdrop-blur-md">
               <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
                 <Link href="/">
                   <LogoBrand />
@@ -60,9 +60,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </nav>
             <main className="relative z-10 mx-auto max-w-7xl px-4 py-8">{children}</main>
-            <footer className="relative z-10 border-t border-nexus-border dark:border-[#1E2A5A]">
+            <footer className="relative z-10 border-t border-nexus-border dark:border-[#2A2A2A]">
               <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-center">
-                <p className="text-xs text-nexus-muted dark:text-[#475569]">
+                <p className="text-xs text-nexus-muted dark:text-[#A1A1A1]">
                   Built by{" "}
                   <a
                     href="https://minus-one-labs.com"
