@@ -110,9 +110,9 @@ MovieNexus uses a custom tagging format:
 
 | Type | Format | Example |
 |------|--------|---------|
-| Movie | `ms-XXXXXXX` | `ms-0000123` |
-| TV Show | `tv-XXXXXXX` | `tv-0000111` |
-| Episode | `es-XXXXXXXXX` | `es-000001011` |
+| Movie | `msXXXXXXX` | `ms0000123` |
+| TV Show | `tvXXXXXXX` | `tv0000111` |
+| Episode | `esXXXXXXXXX` | `es000001011` |
 
 External identifiers (TMDb, IMDb, TVDb) are stored separately in the database.
 
