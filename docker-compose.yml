@@ -41,6 +41,8 @@ services:
       TVDB_API_KEY: ${TVDB_API_KEY}
       FANART_API_KEY: ${FANART_API_KEY}
       TRAKT_CLIENT_ID: ${TRAKT_CLIENT_ID}
+      PLEX_URL: ${PLEX_URL}
+      PLEX_TOKEN: ${PLEX_TOKEN}
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-false}
     ports:
