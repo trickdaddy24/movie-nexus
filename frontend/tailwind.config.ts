@@ -8,15 +8,14 @@ const config: Config = {
       colors: {
         nexus: {
           bg:             "#FFFFFF",
-          card:           "#FFF5F5",
-          border:         "#FFD6E8",
-          accent:         "#FF006E",
-          "accent-hover": "#E0005C",
-          secondary:      "#3BFF6B",
-          tertiary:       "#FFE600",
+          card:           "#F0F9FF",
+          border:         "#CCE8F0",
+          accent:         "#0891B2",
+          "accent-hover": "#0E7490",
+          secondary:      "#FF00AA",
           muted:          "#6B7280",
           text:           "#111827",
-          cyan:           "#3BFF6B",
+          cyan:           "#00F5FF",
         },
       },
       fontFamily: {

@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <SessionWrapper>
-            <nav className="sticky top-0 z-50 border-b border-nexus-border dark:border-[#2A2A2A] bg-white/90 dark:bg-[#0F0F0F]/90 backdrop-blur-md">
+            <nav className="sticky top-0 z-50 border-b border-nexus-border dark:border-[#2A2A2A] bg-white/90 dark:bg-[#0A0A0A]/90 backdrop-blur-md">
               <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
                 <Link href="/">
                   <LogoBrand />

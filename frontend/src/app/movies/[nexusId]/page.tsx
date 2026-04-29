@@ -40,7 +40,7 @@ export default async function MovieDetailPage({
       {/* Back link */}
       <Link
         href="/movies"
-        className="inline-flex items-center gap-1.5 text-sm text-nexus-muted dark:text-[#A1A1A1] hover:text-nexus-accent dark:hover:text-[#FF3399] transition mb-6"
+        className="inline-flex items-center gap-1.5 text-sm text-nexus-muted dark:text-[#A1A1A1] hover:text-nexus-accent dark:hover:text-[#39FFEE] transition mb-6"
       >
         <span aria-hidden>←</span> All Movies
       </Link>
@@ -49,7 +49,7 @@ export default async function MovieDetailPage({
       <div className="flex flex-col sm:flex-row gap-8 mb-10">
         {/* Poster */}
         <div className="shrink-0 w-full sm:w-56">
-          <div className="relative w-full sm:w-56 aspect-[2/3] rounded-xl overflow-hidden bg-[#1C1C1E] border border-[#2A2A2A] shadow-[0_0_40px_rgba(255,0,110,0.08)]">
+          <div className="relative w-full sm:w-56 aspect-[2/3] rounded-xl overflow-hidden bg-[#1C1C1E] border border-[#2A2A2A] shadow-[0_0_40px_rgba(0,245,255,0.08)]">
             {posterSrc ? (
               <img
                 src={posterSrc}
@@ -115,10 +115,10 @@ export default async function MovieDetailPage({
                 const pct = Math.round(score * 10);
                 const color =
                   pct >= 70
-                    ? "text-[#3BFF6B] border-[#3BFF6B]/30 bg-[#3BFF6B]/5"
+                    ? "text-[#22C55E] border-[#22C55E]/30 bg-[#22C55E]/5"
                     : pct >= 50
-                    ? "text-[#FFEB3B] border-[#FFEB3B]/30 bg-[#FFEB3B]/5"
-                    : "text-[#FF3399] border-[#FF3399]/30 bg-[#FF3399]/5";
+                    ? "text-[#EAB308] border-[#EAB308]/30 bg-[#EAB308]/5"
+                    : "text-[#EF4444] border-[#EF4444]/30 bg-[#EF4444]/5";
                 return (
                   <div
                     key={r.label}
@@ -168,7 +168,7 @@ export default async function MovieDetailPage({
       {/* Overview */}
       {movie.overview && (
         <section className="mb-8">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-nexus-accent dark:text-[#FF3399] mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-nexus-accent dark:text-[#39FFEE] mb-3">
             Overview
           </h2>
           <p className="text-[#374151] dark:text-[#D1D5DB] leading-relaxed max-w-[68ch]">
@@ -180,7 +180,7 @@ export default async function MovieDetailPage({
       {/* Stats grid */}
       {(movie.budget > 0 || movie.revenue > 0 || movie.vote_count_tmdb > 0 || movie.imdb_id) && (
         <section className="mb-8">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-nexus-accent dark:text-[#FF3399] mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-nexus-accent dark:text-[#39FFEE] mb-3">
             Details
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -202,7 +202,7 @@ export default async function MovieDetailPage({
 
       {/* Footer meta */}
       <div className="border-t border-nexus-border dark:border-[#2A2A2A] pt-4 flex flex-wrap gap-4 text-xs text-nexus-muted dark:text-[#A1A1A1]">
-        <span className="font-mono text-nexus-accent/50 dark:text-[#FF3399]/40">{movie.nexus_id}</span>
+        <span className="font-mono text-nexus-accent/50 dark:text-[#39FFEE]/40">{movie.nexus_id}</span>
         {movie.added_at && (
           <span>Added {new Date(movie.added_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
         )}
@@ -214,7 +214,7 @@ export default async function MovieDetailPage({
             href={movie.homepage}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-nexus-accent dark:hover:text-[#FF3399] transition"
+            className="hover:text-nexus-accent dark:hover:text-[#39FFEE] transition"
           >
             Official Site →
           </a>

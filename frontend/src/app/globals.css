@@ -8,7 +8,7 @@ body {
 }
 
 .dark body {
-  background-color: #0f0f0f;
+  background-color: #0a0a0a;
   background-image:
     linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
@@ -20,13 +20,13 @@ body {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #fff5f5;
+  background: #f0f9ff;
 }
 .dark ::-webkit-scrollbar-track {
   background: #1c1c1e;
 }
 ::-webkit-scrollbar-thumb {
-  background: #ffd6e8;
+  background: #cce8f0;
   border-radius: 4px;
 }
 .dark ::-webkit-scrollbar-thumb {
@@ -36,12 +36,12 @@ body {
 
 @keyframes text-glow {
   0%, 100% {
-    filter: drop-shadow(0 0 10px rgba(255, 0, 110, 0.8))
-            drop-shadow(0 0 25px rgba(255, 230, 0, 0.5));
+    filter: drop-shadow(0 0 10px rgba(0,245,255,0.8))
+            drop-shadow(0 0 25px rgba(255,0,170,0.5));
   }
   50% {
-    filter: drop-shadow(0 0 18px rgba(255, 0, 110, 1))
-            drop-shadow(0 0 40px rgba(255, 230, 0, 0.8));
+    filter: drop-shadow(0 0 18px rgba(0,245,255,1))
+            drop-shadow(0 0 40px rgba(255,0,170,0.8));
   }
 }
 
@@ -58,7 +58,7 @@ body {
   width: 55vw;
   height: 55vw;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,0,110,0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0,245,255,0.06) 0%, transparent 70%);
 }
 .mol-blob-bl {
   position: absolute;
@@ -67,14 +67,14 @@ body {
   width: 45vw;
   height: 45vw;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(59,255,107,0.05) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255,0,170,0.05) 0%, transparent 70%);
 }
 .dark .mol-blob-tr {
-  background: radial-gradient(circle, rgba(255,51,153,0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(57,255,238,0.18) 0%, transparent 70%);
   animation: mol-blob-pulse 7s ease-in-out infinite alternate;
 }
 .dark .mol-blob-bl {
-  background: radial-gradient(circle, rgba(94,255,140,0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255,77,230,0.12) 0%, transparent 70%);
   animation: mol-blob-pulse 8s ease-in-out infinite alternate-reverse;
 }
 @keyframes mol-blob-pulse {

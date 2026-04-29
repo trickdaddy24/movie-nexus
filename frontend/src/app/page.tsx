@@ -50,7 +50,7 @@ export default async function HomePage() {
             {stats.top_genres.map((g) => (
               <span
                 key={g.name}
-                className="rounded-full border border-nexus-border bg-nexus-card px-3 py-1 text-sm text-nexus-text dark:bg-[#121840] dark:border-[#1E2A5A] dark:text-nexus-muted"
+                className="rounded-full border border-nexus-border bg-nexus-card px-3 py-1 text-sm text-nexus-text dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-nexus-muted"
               >
                 {g.name} <span className="text-nexus-muted">({g.count})</span>
               </span>
@@ -63,7 +63,7 @@ export default async function HomePage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold dark:text-white">Recent Movies</h2>
-            <Link href="/movies" className="text-sm text-nexus-accent hover:text-nexus-accent-hover dark:hover:text-[#00E0FF] transition">
+            <Link href="/movies" className="text-sm text-nexus-accent hover:text-nexus-accent-hover dark:hover:text-[#39FFEE] transition">
               View all &rarr;
             </Link>
           </div>
@@ -90,7 +90,7 @@ export default async function HomePage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold dark:text-white">Recent TV Shows</h2>
-            <Link href="/shows" className="text-sm text-nexus-accent hover:text-nexus-accent-hover dark:hover:text-[#00E0FF] transition">
+            <Link href="/shows" className="text-sm text-nexus-accent hover:text-nexus-accent-hover dark:hover:text-[#39FFEE] transition">
               View all &rarr;
             </Link>
           </div>
@@ -118,9 +118,9 @@ export default async function HomePage() {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-nexus-border bg-nexus-card p-4 text-center dark:bg-[#121840] dark:border-[#1E2A5A]">
+    <div className="rounded-xl border border-nexus-border bg-nexus-card p-4 text-center dark:bg-[#1C1C1E] dark:border-[#2A2A2A]">
       <div className="text-2xl font-bold text-nexus-accent">{value}</div>
-      <div className="text-xs text-nexus-muted mt-1 dark:text-[#64748B]">{label}</div>
+      <div className="text-xs text-nexus-muted mt-1 dark:text-[#A1A1A1]">{label}</div>
     </div>
   );
 }

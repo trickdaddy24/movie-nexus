@@ -21,7 +21,7 @@ export default function SearchBar() {
         placeholder="Search..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="w-48 rounded-lg border border-nexus-border bg-nexus-card px-3 py-1.5 text-sm text-nexus-text placeholder-nexus-muted outline-none focus:border-nexus-accent transition dark:bg-[#121840] dark:border-[#1E2A5A] dark:text-white dark:placeholder-[#64748B] dark:focus:border-[#8A4DFF]"
+        className="w-48 rounded-lg border border-nexus-border bg-nexus-card px-3 py-1.5 text-sm text-nexus-text placeholder-nexus-muted outline-none focus:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-white dark:placeholder-[#6B7280] dark:focus:border-[#39FFEE]"
       />
     </form>
   );

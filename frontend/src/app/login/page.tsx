@@ -37,7 +37,7 @@ export default function LoginPage() {
           <LogoBrand />
         </div>
 
-        <div className="bg-nexus-card dark:bg-[#121840] rounded-2xl border border-nexus-border dark:border-[#1E2A5A] p-8 shadow-sm">
+        <div className="bg-nexus-card dark:bg-[#1C1C1E] rounded-2xl border border-nexus-border dark:border-[#2A2A2A] p-8 shadow-sm">
           <h1 className="text-xl font-bold text-nexus-text dark:text-white mb-6 text-center">
             Admin Login
           </h1>
@@ -53,7 +53,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-nexus-border dark:border-[#1E2A5A] bg-white dark:bg-[#0B0F2A] text-nexus-text dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-nexus-accent"
+                className="w-full rounded-lg border border-nexus-border dark:border-[#2A2A2A] bg-white dark:bg-[#0A0A0A] text-nexus-text dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-nexus-accent"
               />
             </div>
 
@@ -68,7 +68,7 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-nexus-border dark:border-[#1E2A5A] bg-white dark:bg-[#0B0F2A] text-nexus-text dark:text-white px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-nexus-accent"
+                  className="w-full rounded-lg border border-nexus-border dark:border-[#2A2A2A] bg-white dark:bg-[#0A0A0A] text-nexus-text dark:text-white px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-nexus-accent"
                 />
                 <button
                   type="button"

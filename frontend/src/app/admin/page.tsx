@@ -290,7 +290,7 @@ export default function AdminPage() {
           const type = startForm.media_type === "movie" ? "movies" : "TV shows";
           const approx = (startForm.pages * 20).toLocaleString();
           return (
-            <div className="rounded-lg bg-nexus-accent/5 border border-nexus-accent/20 px-4 py-2 text-sm text-gray-600 dark:text-[#94A3B8]">
+            <div className="rounded-lg bg-nexus-accent/5 border border-nexus-accent/20 px-4 py-2 text-sm text-gray-600 dark:text-[#A1A1A1]">
               {cat?.emoji} Will import up to{" "}
               <strong className="text-nexus-accent">~{approx} {cat?.label} {type}</strong>
               {" "}from TMDb ({cat?.desc})
@@ -303,7 +303,7 @@ export default function AdminPage() {
       {/* Backfill Origin Data */}
       <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Backfill Origin Data</h2>
-        <p className="text-sm text-gray-500 dark:text-[#94A3B8]">
+        <p className="text-sm text-gray-500 dark:text-[#A1A1A1]">
           Fetch and store <code className="text-nexus-accent">origin_country</code> +{" "}
           <code className="text-nexus-accent">original_language</code> for existing records that are missing this data.
           Run once after deploying the categories feature.

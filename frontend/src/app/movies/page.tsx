@@ -53,7 +53,7 @@ export default async function MoviesPage({
             className={
               category === cat.id
                 ? "rounded-full px-4 py-1.5 text-sm font-semibold bg-nexus-accent text-white"
-                : "rounded-full px-4 py-1.5 text-sm border border-nexus-border text-nexus-muted hover:border-nexus-accent hover:text-nexus-accent transition dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#5EFF8C]"
+                : "rounded-full px-4 py-1.5 text-sm border border-nexus-border text-nexus-muted hover:border-nexus-accent hover:text-nexus-accent transition dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#39FFEE]"
             }
           >
             {cat.emoji} {cat.label}
@@ -85,7 +85,7 @@ export default async function MoviesPage({
           {page > 1 && (
             <a
               href={`/movies?page=${page - 1}&sort=${sort}&category=${category}`}
-              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#5EFF8C]"
+              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#39FFEE]"
             >
               Previous
             </a>
@@ -96,7 +96,7 @@ export default async function MoviesPage({
           {page < data.pages && (
             <a
               href={`/movies?page=${page + 1}&sort=${sort}&category=${category}`}
-              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#5EFF8C]"
+              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#39FFEE]"
             >
               Next
             </a>
