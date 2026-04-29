@@ -1,7 +1,7 @@
 import { getMovie } from "@/lib/api";
-import RatingBadge from "@/components/RatingBadge";
 import { notFound } from "next/navigation";
 import { COUNTRY_MAP, LANGUAGE_MAP, getCategoryLabel } from "@/lib/origin";
+import Link from "next/link";
 
 export default async function MovieDetailPage({
   params,
@@ -18,109 +18,221 @@ export default async function MovieDetailPage({
   }
 
   const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
+  const posterSrc = movie.poster_url?.replace("/original/", "/w500/") ?? null;
+
+  const originCode = movie.origin_country?.split(",")[0].trim() ?? null;
+  const country = originCode ? COUNTRY_MAP[originCode] : null;
+  const langName = movie.original_language
+    ? LANGUAGE_MAP[movie.original_language] ?? movie.original_language
+    : null;
+  const catLabel = movie.origin_country
+    ? getCategoryLabel(movie.origin_country, movie.original_language ?? "", movie.genres, movie.content_rating)
+    : null;
+
+  const meta = [
+    year,
+    movie.runtime ? `${movie.runtime} min` : null,
+    movie.status,
+  ].filter(Boolean);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <div className="flex items-start gap-4 mb-2">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold dark:text-white">{movie.title}</h1>
-            {movie.tagline && (
-              <p className="text-nexus-muted italic mt-1">{movie.tagline}</p>
+    <div className="max-w-5xl mx-auto">
+      {/* Back link */}
+      <Link
+        href="/movies"
+        className="inline-flex items-center gap-1.5 text-sm text-nexus-muted dark:text-[#A1A1A1] hover:text-nexus-accent dark:hover:text-[#FF3399] transition mb-6"
+      >
+        <span aria-hidden>←</span> All Movies
+      </Link>
+
+      {/* Hero: poster + primary info */}
+      <div className="flex flex-col sm:flex-row gap-8 mb-10">
+        {/* Poster */}
+        <div className="shrink-0 w-full sm:w-56">
+          <div className="relative w-full sm:w-56 aspect-[2/3] rounded-xl overflow-hidden bg-[#1C1C1E] border border-[#2A2A2A] shadow-[0_0_40px_rgba(255,0,110,0.08)]">
+            {posterSrc ? (
+              <img
+                src={posterSrc}
+                alt={`${movie.title} poster`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-5xl font-black text-[#2A2A2A]">
+                {movie.title.charAt(0)}
+              </div>
             )}
           </div>
-          {movie.content_rating && (
-            <span className="shrink-0 rounded border border-nexus-border px-2 py-1 text-xs text-nexus-muted dark:border-[#1E2A5A] dark:text-[#94A3B8]">
-              {movie.content_rating}
-            </span>
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0 flex flex-col gap-4">
+          {/* Title + content rating */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-black tracking-tight text-[#111827] dark:text-white leading-tight">
+                {movie.title}
+              </h1>
+              {movie.original_title && movie.original_title !== movie.title && (
+                <p className="text-sm text-nexus-muted dark:text-[#A1A1A1] mt-0.5">
+                  {movie.original_title}
+                </p>
+              )}
+              {movie.tagline && (
+                <p className="text-sm italic text-nexus-muted dark:text-[#A1A1A1] mt-1">
+                  &ldquo;{movie.tagline}&rdquo;
+                </p>
+              )}
+            </div>
+            {movie.content_rating && (
+              <span className="shrink-0 mt-1 rounded border border-nexus-border dark:border-[#2A2A2A] px-2 py-0.5 text-xs font-mono text-nexus-muted dark:text-[#A1A1A1]">
+                {movie.content_rating}
+              </span>
+            )}
+          </div>
+
+          {/* Meta row */}
+          {meta.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-nexus-muted dark:text-[#A1A1A1]">
+              {meta.map((item, i) => (
+                <span key={i} className="flex items-center gap-2">
+                  {i > 0 && <span className="text-[#3A3A3A]">·</span>}
+                  {item}
+                </span>
+              ))}
+            </div>
           )}
-        </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-sm text-nexus-muted mt-3 dark:text-[#94A3B8]">
-          {year && <span>{year}</span>}
-          {movie.runtime && <span>{movie.runtime} min</span>}
-          {movie.status && <span>{movie.status}</span>}
-          <span className="font-mono text-xs text-nexus-accent/60">{movie.nexus_id}</span>
-        </div>
-      </div>
+          {/* Ratings */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: "TMDb", value: movie.rating_tmdb },
+              { label: "IMDb", value: movie.rating_imdb },
+              { label: "Trakt", value: movie.rating_trakt },
+            ]
+              .filter((r) => r.value !== null && r.value !== undefined)
+              .map((r) => {
+                const score = r.value!;
+                const pct = Math.round(score * 10);
+                const color =
+                  pct >= 70
+                    ? "text-[#3BFF6B] border-[#3BFF6B]/30 bg-[#3BFF6B]/5"
+                    : pct >= 50
+                    ? "text-[#FFEB3B] border-[#FFEB3B]/30 bg-[#FFEB3B]/5"
+                    : "text-[#FF3399] border-[#FF3399]/30 bg-[#FF3399]/5";
+                return (
+                  <div
+                    key={r.label}
+                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 ${color}`}
+                  >
+                    <span className="text-base font-black">{score.toFixed(1)}</span>
+                    <span className="text-xs font-semibold opacity-70">{r.label}</span>
+                  </div>
+                );
+              })}
+          </div>
 
-      <div className="flex flex-wrap gap-2">
-        <RatingBadge rating={movie.rating_tmdb} label="TMDb" />
-        <RatingBadge rating={movie.rating_imdb} label="IMDb" />
-        <RatingBadge rating={movie.rating_trakt} label="Trakt" />
-      </div>
-
-      {movie.origin_country && (() => {
-        const code = movie.origin_country.split(",")[0].trim();
-        const country = COUNTRY_MAP[code];
-        const langName = LANGUAGE_MAP[movie.original_language || ""] || movie.original_language || "";
-        const catLabel = getCategoryLabel(movie.origin_country, movie.original_language || "", movie.genres, movie.content_rating);
-        return (
-          <div className="flex items-center gap-3 rounded-lg border border-nexus-border dark:border-[#1E2A5A] bg-nexus-card dark:bg-[#121840] px-4 py-3">
-            <span className="text-3xl">{country?.flag ?? "🌐"}</span>
-            <div>
-              <div className="font-semibold dark:text-white">{country?.name ?? code}</div>
-              <div className="text-xs text-nexus-muted dark:text-[#94A3B8]">
-                {langName}{langName ? " · " : ""}{catLabel}
+          {/* Origin */}
+          {country && (
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{country.flag}</span>
+              <div>
+                <span className="text-sm font-semibold text-[#111827] dark:text-white">
+                  {country.name}
+                </span>
+                {(langName || catLabel) && (
+                  <span className="text-sm text-nexus-muted dark:text-[#A1A1A1]">
+                    {langName ? ` · ${langName}` : ""}
+                    {catLabel ? ` · ${catLabel}` : ""}
+                  </span>
+                )}
               </div>
             </div>
-            <span className="ml-auto rounded-full px-3 py-1 text-xs font-semibold border border-nexus-accent/30 text-nexus-accent dark:border-[#8A4DFF]/40 dark:text-[#A78BFA]">
-              {catLabel.toUpperCase()}
-            </span>
-          </div>
-        );
-      })()}
+          )}
 
-      {movie.genres.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {movie.genres.map((g) => (
-            <span
-              key={g.name}
-              className="rounded-full border border-nexus-border bg-nexus-card px-3 py-1 text-sm dark:bg-[#1E2A5A] dark:text-[#94A3B8] dark:border-[#2D3A6B]"
-            >
-              {g.name}
-            </span>
-          ))}
+          {/* Genres */}
+          {movie.genres.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {movie.genres.map((g) => (
+                <span
+                  key={g.name}
+                  className="rounded-full border border-nexus-border dark:border-[#2A2A2A] bg-nexus-card dark:bg-[#1C1C1E] px-3 py-1 text-xs font-medium text-nexus-muted dark:text-[#A1A1A1]"
+                >
+                  {g.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
+      {/* Overview */}
       {movie.overview && (
-        <section>
-          <h2 className="text-lg font-semibold mb-2 dark:text-white">Overview</h2>
-          <p className="text-nexus-muted leading-relaxed dark:text-[#94A3B8]">{movie.overview}</p>
+        <section className="mb-8">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-nexus-accent dark:text-[#FF3399] mb-3">
+            Overview
+          </h2>
+          <p className="text-[#374151] dark:text-[#D1D5DB] leading-relaxed max-w-[68ch]">
+            {movie.overview}
+          </p>
         </section>
       )}
 
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {movie.budget > 0 && (
-          <DetailItem label="Budget" value={`$${(movie.budget / 1_000_000).toFixed(0)}M`} />
-        )}
-        {movie.revenue > 0 && (
-          <DetailItem label="Revenue" value={`$${(movie.revenue / 1_000_000).toFixed(0)}M`} />
-        )}
-        {movie.vote_count_tmdb > 0 && (
-          <DetailItem label="TMDb Votes" value={movie.vote_count_tmdb.toLocaleString()} />
-        )}
-        {movie.imdb_id && (
-          <DetailItem label="IMDb" value={movie.imdb_id} />
-        )}
-      </section>
+      {/* Stats grid */}
+      {(movie.budget > 0 || movie.revenue > 0 || movie.vote_count_tmdb > 0 || movie.imdb_id) && (
+        <section className="mb-8">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-nexus-accent dark:text-[#FF3399] mb-3">
+            Details
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {movie.budget > 0 && (
+              <StatCard label="Budget" value={`$${(movie.budget / 1_000_000).toFixed(0)}M`} />
+            )}
+            {movie.revenue > 0 && (
+              <StatCard label="Revenue" value={`$${(movie.revenue / 1_000_000).toFixed(0)}M`} />
+            )}
+            {movie.vote_count_tmdb > 0 && (
+              <StatCard label="TMDb Votes" value={movie.vote_count_tmdb.toLocaleString()} />
+            )}
+            {movie.imdb_id && (
+              <StatCard label="IMDb ID" value={movie.imdb_id} mono />
+            )}
+          </div>
+        </section>
+      )}
 
-      <div className="border-t border-nexus-border pt-4 text-xs text-nexus-muted dark:border-[#1E2A5A]">
-        <span>Added: {movie.added_at ? new Date(movie.added_at).toLocaleDateString() : "—"}</span>
+      {/* Footer meta */}
+      <div className="border-t border-nexus-border dark:border-[#2A2A2A] pt-4 flex flex-wrap gap-4 text-xs text-nexus-muted dark:text-[#A1A1A1]">
+        <span className="font-mono text-nexus-accent/50 dark:text-[#FF3399]/40">{movie.nexus_id}</span>
+        {movie.added_at && (
+          <span>Added {new Date(movie.added_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+        )}
         {movie.updated_at && (
-          <span className="ml-4">Updated: {new Date(movie.updated_at).toLocaleDateString()}</span>
+          <span>Updated {new Date(movie.updated_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
+        )}
+        {movie.homepage && (
+          <a
+            href={movie.homepage}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-nexus-accent dark:hover:text-[#FF3399] transition"
+          >
+            Official Site →
+          </a>
         )}
       </div>
     </div>
   );
 }
 
-function DetailItem({ label, value }: { label: string; value: string }) {
+function StatCard({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="rounded-lg border border-nexus-border bg-nexus-card p-3 dark:bg-[#121840] dark:border-[#1E2A5A]">
-      <div className="text-xs text-nexus-muted dark:text-[#94A3B8]">{label}</div>
-      <div className="text-sm font-medium mt-0.5 dark:text-white">{value}</div>
+    <div className="rounded-xl border border-nexus-border dark:border-[#2A2A2A] bg-nexus-card dark:bg-[#1C1C1E] p-4">
+      <div className="text-[10px] font-semibold uppercase tracking-widest text-nexus-muted dark:text-[#A1A1A1] mb-1">
+        {label}
+      </div>
+      <div className={`text-base font-bold text-[#111827] dark:text-white ${mono ? "font-mono text-sm" : ""}`}>
+        {value}
+      </div>
     </div>
   );
 }
