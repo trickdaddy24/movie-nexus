@@ -25,6 +25,8 @@ RUN mkdir -p .next/standalone/node_modules/prisma && cp -r node_modules/prisma/.
 RUN mkdir -p .next/standalone/node_modules/@node-rs && \
   cp -r node_modules/@node-rs/bcrypt .next/standalone/node_modules/@node-rs/bcrypt 2>/dev/null || true && \
   cp -r node_modules/@node-rs/bcrypt-linux-x64-musl .next/standalone/node_modules/@node-rs/bcrypt-linux-x64-musl 2>/dev/null || true
+# Copy bcryptjs (next-auth depends on it internally — must not be webpack-bundled)
+RUN mkdir -p .next/standalone/node_modules/bcryptjs && cp -r node_modules/bcryptjs/. .next/standalone/node_modules/bcryptjs/ 2>/dev/null || true
 # Copy @prisma/debug which is required by @prisma/engines at runtime
 RUN mkdir -p .next/standalone/node_modules/@prisma/debug && cp -r node_modules/@prisma/debug/. .next/standalone/node_modules/@prisma/debug/ 2>/dev/null || true
 
