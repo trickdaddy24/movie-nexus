@@ -1,8 +1,9 @@
 import asyncio
+import json
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import select, case
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +15,7 @@ from models import (
 )
 from api.plex import plex_client
 from api.tmdb import tmdb_client
+from api.telegram import send_telegram
 from routers.imports import _import_single_movie, _import_single_show
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,36 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/plex", tags=["Plex"])
 
 _active_jobs: dict[int, dict] = {}
+
+
+def _make_progress() -> dict:
+    """Create a fresh progress dict with per-library + activity feed support."""
+    return {
+        "imported": 0, "skipped": 0, "failed": 0, "total": 0,
+        "current_title": "", "status": "running",
+        "libraries": [],
+        "activity": [],
+    }
+
+
+def _append_activity(progress: dict, title: str, action: str, library: str, media_type: str):
+    """Append an item to the activity feed, capped at 200."""
+    progress["activity"].append({
+        "title": title, "action": action, "library": library, "type": media_type,
+    })
+    if len(progress["activity"]) > 200:
+        progress["activity"] = progress["activity"][-200:]
+
+
+def _fmt_duration(seconds: int) -> str:
+    """Format seconds as e.g. '4m 23s' or '1h 12m'."""
+    if seconds < 60:
+        return f"{seconds}s"
+    if seconds < 3600:
+        return f"{seconds // 60}m {seconds % 60}s"
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    return f"{h}h {m}m"
 
 
 # ── Schemas ──
@@ -88,14 +120,11 @@ async def start_plex_sync(body: PlexSyncRequest, db: AsyncSession = Depends(get_
     await db.commit()
     await db.refresh(session)
 
-    progress = {
-        "imported": 0, "skipped": 0, "failed": 0, "total": 0,
-        "current_title": "", "status": "running",
-    }
+    progress = _make_progress()
     _active_jobs[session.id] = progress
 
     asyncio.create_task(_run_plex_sync(session.id, body.library_key))
-    return {"session_id": session.id}
+    return {"session_id": session.id, "message": "Plex sync started"}
 
 
 # ── Refresh Metadata / Artwork ──
@@ -116,14 +145,11 @@ async def start_plex_refresh(body: PlexRefreshRequest, db: AsyncSession = Depend
     await db.commit()
     await db.refresh(session)
 
-    progress = {
-        "imported": 0, "skipped": 0, "failed": 0, "total": 0,
-        "current_title": "", "status": "running",
-    }
+    progress = _make_progress()
     _active_jobs[session.id] = progress
 
     asyncio.create_task(_run_plex_refresh(session.id, body.media_type, body.nexus_ids))
-    return {"session_id": session.id}
+    return {"session_id": session.id, "message": "Plex refresh started"}
 
 
 # ── SSE Progress ──
@@ -131,18 +157,67 @@ async def start_plex_refresh(body: PlexRefreshRequest, db: AsyncSession = Depend
 @router.get("/progress/{session_id}")
 async def plex_progress(session_id: int):
     async def stream():
-        import json
+        last_activity_len = 0
         while True:
             progress = _active_jobs.get(session_id)
             if progress is None:
-                yield {"data": json.dumps({"status": "not_found"})}
+                yield {"event": "error", "data": json.dumps({"status": "not_found"})}
                 return
-            yield {"data": json.dumps(progress)}
+
+            # Main progress tick (includes libraries)
+            payload = {
+                "imported": progress["imported"],
+                "skipped": progress["skipped"],
+                "failed": progress["failed"],
+                "total": progress["total"],
+                "current_title": progress["current_title"],
+                "status": progress["status"],
+                "libraries": progress.get("libraries", []),
+            }
+            yield {"event": "progress", "data": json.dumps(payload)}
+
+            # Send new activity items since last tick (delta only)
+            activity = progress.get("activity", [])
+            if len(activity) > last_activity_len:
+                new_items = activity[last_activity_len:]
+                yield {"event": "items", "data": json.dumps(new_items)}
+                last_activity_len = len(activity)
+
             if progress.get("status") == "completed":
+                yield {"event": "complete", "data": json.dumps(payload)}
                 return
             await asyncio.sleep(1)
 
     return EventSourceResponse(stream())
+
+
+# ── Sync History ──
+
+@router.get("/history")
+async def plex_sync_history(
+    limit: int = Query(20, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ImportSession)
+        .where(ImportSession.source.in_(["plex", "plex_refresh"]))
+        .order_by(ImportSession.started_at.desc())
+        .limit(limit)
+    )
+    sessions = result.scalars().all()
+    return [{
+        "id": s.id,
+        "source": s.source,
+        "media_type": s.media_type,
+        "status": s.status,
+        "total": s.total or 0,
+        "imported": s.imported or 0,
+        "skipped": s.skipped or 0,
+        "failed": s.failed or 0,
+        "started_at": s.started_at.isoformat() if s.started_at else None,
+        "finished_at": s.finished_at.isoformat() if s.finished_at else None,
+        "duration_seconds": int((s.finished_at - s.started_at).total_seconds()) if s.finished_at and s.started_at else None,
+    } for s in sessions]
 
 
 # ── Sync Logic ──
@@ -150,6 +225,7 @@ async def plex_progress(session_id: int):
 async def _run_plex_sync(session_id: int, library_key: str | None):
     """Scan Plex libraries, match/import items, fill gaps, pull artwork."""
     progress = _active_jobs[session_id]
+    sync_start = datetime.now(timezone.utc)
 
     async with async_session() as db:
         try:
@@ -157,42 +233,81 @@ async def _run_plex_sync(session_id: int, library_key: str | None):
             if library_key:
                 libraries = [lib for lib in libraries if lib["key"] == library_key]
 
+            # Filter to movie/show only
+            libraries = [lib for lib in libraries if lib["type"] in ("movie", "show")]
+
+            # Initialize per-library tracking
             for lib in libraries:
-                lib_type = lib["type"]  # "movie" or "show"
-                if lib_type not in ("movie", "show"):
-                    continue
+                progress["libraries"].append({
+                    "key": lib["key"],
+                    "title": lib["title"],
+                    "type": lib["type"],
+                    "status": "queued",
+                    "total": 0, "imported": 0, "skipped": 0, "failed": 0,
+                })
+
+            # Telegram: sync started
+            lib_names = ", ".join(lib["title"] for lib in libraries)
+            await send_telegram(
+                f"<b>Plex Sync Started</b>\n"
+                f"Libraries: {lib_names} ({len(libraries)})"
+            )
+
+            for lib_idx, lib in enumerate(libraries):
+                lib_type = lib["type"]
+                lib_progress = progress["libraries"][lib_idx]
+                lib_progress["status"] = "scanning"
 
                 logger.info(f"Plex sync: scanning library '{lib['title']}' ({lib_type})")
                 items = await plex_client.get_all_items(lib["key"])
+                lib_progress["total"] = len(items)
+                lib_progress["status"] = "syncing"
                 progress["total"] += len(items)
 
                 for item in items:
+                    title = item.get("title", "Unknown")
                     try:
-                        title = item.get("title", "Unknown")
                         progress["current_title"] = title
                         guids = item.get("Guid", [])
+
+                        before = (progress["imported"], progress["skipped"], progress["failed"])
 
                         if lib_type == "movie":
                             await _sync_single_movie(db, item, guids, progress)
                         else:
                             await _sync_single_show(db, item, guids, progress)
 
+                        after = (progress["imported"], progress["skipped"], progress["failed"])
+                        if after[0] > before[0]:
+                            action = "imported"
+                        elif after[2] > before[2]:
+                            action = "failed"
+                        else:
+                            action = "skipped"
+
                     except Exception as e:
                         progress["failed"] += 1
+                        action = "failed"
                         err = f"{type(e).__name__}: {e}"
-                        logger.error(f"Plex sync failed for '{item.get('title')}': {err}")
+                        logger.error(f"Plex sync failed for '{title}': {err}")
                         try:
                             db.add(ImportLog(
                                 session_id=session_id,
                                 media_type=lib_type,
                                 level="error",
-                                message=f"{item.get('title')}: {err}",
+                                message=f"{title}: {err}",
                             ))
                             await db.commit()
                         except Exception:
                             pass
 
+                    # Update per-library counters
+                    lib_progress[action] += 1
+                    _append_activity(progress, title, action, lib["title"], lib_type)
+
                     await asyncio.sleep(0.15)
+
+                lib_progress["status"] = "done"
 
             # Finalize session
             session_obj = await db.get(ImportSession, session_id)
@@ -204,6 +319,17 @@ async def _run_plex_sync(session_id: int, library_key: str | None):
                 session_obj.total = progress["total"]
                 session_obj.status = "completed"
                 await db.commit()
+
+            # Telegram: sync complete
+            elapsed = int((datetime.now(timezone.utc) - sync_start).total_seconds())
+            await send_telegram(
+                f"<b>Plex Sync Complete</b>\n"
+                f"Imported: {progress['imported']:,}\n"
+                f"Skipped: {progress['skipped']:,}\n"
+                f"Failed: {progress['failed']:,}\n"
+                f"Duration: {_fmt_duration(elapsed)}\n"
+                f"Libraries synced: {len(libraries)}"
+            )
 
         except Exception as e:
             logger.error(f"Plex sync fatal error: {e}")
@@ -394,6 +520,7 @@ async def _upsert_external_id(db: AsyncSession, media_type: str, media_id: int, 
 async def _run_plex_refresh(session_id: int, media_type: str, nexus_ids: list[str] | None):
     """Re-fetch metadata from Plex for existing records. Fix non-English artwork."""
     progress = _active_jobs[session_id]
+    sync_start = datetime.now(timezone.utc)
 
     async with async_session() as db:
         try:
@@ -415,13 +542,15 @@ async def _run_plex_refresh(session_id: int, media_type: str, nexus_ids: list[st
             progress["total"] = len(rows)
 
             for record, plex_rating_key in rows:
+                title = record.title or "Unknown"
                 try:
-                    progress["current_title"] = record.title or "Unknown"
+                    progress["current_title"] = title
 
                     # Fetch fresh Plex metadata
                     plex_data = await plex_client.get_item_metadata(plex_rating_key)
                     if not plex_data:
                         progress["skipped"] += 1
+                        _append_activity(progress, title, "skipped", "refresh", media_type)
                         continue
 
                     # Fill missing fields
@@ -456,10 +585,12 @@ async def _run_plex_refresh(session_id: int, media_type: str, nexus_ids: list[st
 
                     await db.commit()
                     progress["imported"] += 1
+                    _append_activity(progress, title, "imported", "refresh", media_type)
 
                 except Exception as e:
                     progress["failed"] += 1
-                    logger.error(f"Plex refresh failed for '{record.title}': {e}")
+                    _append_activity(progress, title, "failed", "refresh", media_type)
+                    logger.error(f"Plex refresh failed for '{title}': {e}")
 
                 await asyncio.sleep(0.15)
 
@@ -473,6 +604,17 @@ async def _run_plex_refresh(session_id: int, media_type: str, nexus_ids: list[st
                 session_obj.total = progress["total"]
                 session_obj.status = "completed"
                 await db.commit()
+
+            # Telegram: refresh complete
+            elapsed = int((datetime.now(timezone.utc) - sync_start).total_seconds())
+            await send_telegram(
+                f"<b>Plex Artwork Refresh Complete</b>\n"
+                f"Type: {media_type}\n"
+                f"Refreshed: {progress['imported']:,}\n"
+                f"Skipped: {progress['skipped']:,}\n"
+                f"Failed: {progress['failed']:,}\n"
+                f"Duration: {_fmt_duration(elapsed)}"
+            )
 
         except Exception as e:
             logger.error(f"Plex refresh fatal error: {e}")
@@ -489,6 +631,8 @@ async def run_plex_sync_job():
         return
 
     logger.info("Starting scheduled Plex sync...")
+    sync_start = datetime.now(timezone.utc)
+
     async with async_session() as db:
         # Find last sync timestamp
         result = await db.execute(
@@ -510,18 +654,35 @@ async def run_plex_sync_job():
         await db.commit()
         await db.refresh(session)
 
-    progress = {
-        "imported": 0, "skipped": 0, "failed": 0, "total": 0,
-        "current_title": "", "status": "running",
-    }
+    progress = _make_progress()
     _active_jobs[session.id] = progress
 
     async with async_session() as db:
         try:
             libraries = await plex_client.get_libraries()
-            for lib in libraries:
-                if lib["type"] not in ("movie", "show"):
-                    continue
+            sync_libs = [lib for lib in libraries if lib["type"] in ("movie", "show")]
+
+            # Initialize per-library tracking
+            for lib in sync_libs:
+                progress["libraries"].append({
+                    "key": lib["key"],
+                    "title": lib["title"],
+                    "type": lib["type"],
+                    "status": "queued",
+                    "total": 0, "imported": 0, "skipped": 0, "failed": 0,
+                })
+
+            # Telegram: scheduled sync started
+            lib_names = ", ".join(lib["title"] for lib in sync_libs)
+            await send_telegram(
+                f"<b>Plex Scheduled Sync Started</b>\n"
+                f"Libraries: {lib_names} ({len(sync_libs)})\n"
+                f"Mode: incremental (since last sync)"
+            )
+
+            for lib_idx, lib in enumerate(sync_libs):
+                lib_progress = progress["libraries"][lib_idx]
+                lib_progress["status"] = "scanning"
 
                 items = await plex_client.get_all_items(lib["key"])
 
@@ -530,22 +691,42 @@ async def run_plex_sync_job():
                     last_ts = int(last_sync.timestamp())
                     items = [i for i in items if i.get("addedAt", 0) > last_ts]
 
+                lib_progress["total"] = len(items)
+                lib_progress["status"] = "syncing"
                 progress["total"] += len(items)
                 logger.info(f"Plex scheduled sync: {len(items)} new items in '{lib['title']}'")
 
                 for item in items:
+                    title = item.get("title", "Unknown")
                     try:
-                        progress["current_title"] = item.get("title", "Unknown")
+                        progress["current_title"] = title
                         guids = item.get("Guid", [])
+
+                        before = (progress["imported"], progress["skipped"], progress["failed"])
+
                         if lib["type"] == "movie":
                             await _sync_single_movie(db, item, guids, progress)
                         else:
                             await _sync_single_show(db, item, guids, progress)
+
+                        after = (progress["imported"], progress["skipped"], progress["failed"])
+                        if after[0] > before[0]:
+                            action = "imported"
+                        elif after[2] > before[2]:
+                            action = "failed"
+                        else:
+                            action = "skipped"
+
                     except Exception as e:
                         progress["failed"] += 1
+                        action = "failed"
                         logger.error(f"Scheduled Plex sync error: {e}")
 
+                    lib_progress[action] += 1
+                    _append_activity(progress, title, action, lib["title"], lib["type"])
                     await asyncio.sleep(0.15)
+
+                lib_progress["status"] = "done"
 
             session_obj = await db.get(ImportSession, session.id)
             if session_obj:
@@ -556,6 +737,17 @@ async def run_plex_sync_job():
                 session_obj.total = progress["total"]
                 session_obj.status = "completed"
                 await db.commit()
+
+            # Telegram: scheduled sync complete
+            elapsed = int((datetime.now(timezone.utc) - sync_start).total_seconds())
+            await send_telegram(
+                f"<b>Plex Scheduled Sync Complete</b>\n"
+                f"Imported: {progress['imported']:,}\n"
+                f"Skipped: {progress['skipped']:,}\n"
+                f"Failed: {progress['failed']:,}\n"
+                f"Duration: {_fmt_duration(elapsed)}\n"
+                f"Libraries synced: {len(sync_libs)}"
+            )
 
         except Exception as e:
             logger.error(f"Scheduled Plex sync fatal: {e}")

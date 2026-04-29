@@ -5,6 +5,17 @@ All notable changes to MovieNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-04-29
+
+### Added
+- Dedicated Plex Dashboard at `/admin/plex` — per-library progress cards, item-level activity feed, sync history table
+- Per-library tracking with status transitions: queued → scanning → syncing → done
+- Item-level activity feed — terminal-style dark pane with action badges (ADD/SKIP/FAIL), auto-scroll, 200-item cap
+- SSE named events: `progress` (full state), `items` (delta feed), `complete` (final)
+- Telegram notifications on Plex sync start (library list) and complete (counts + duration)
+- `GET /plex/history` endpoint — recent Plex sync sessions with computed duration
+- Compact Plex widget on `/admin` page linking to dedicated dashboard
+
 ## [0.6.0] - 2026-04-29
 
 ### Added

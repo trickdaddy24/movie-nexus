@@ -300,3 +300,39 @@ export async function startPlexRefresh(
     body: JSON.stringify(body),
   });
 }
+
+export interface PlexLibraryProgress {
+  key: string;
+  title: string;
+  type: string;
+  status: "queued" | "scanning" | "syncing" | "done";
+  total: number;
+  imported: number;
+  skipped: number;
+  failed: number;
+}
+
+export interface PlexActivityItem {
+  title: string;
+  action: "imported" | "skipped" | "failed";
+  library: string;
+  type: string;
+}
+
+export interface PlexSyncHistoryEntry {
+  id: number;
+  source: string;
+  media_type: string;
+  status: string;
+  total: number;
+  imported: number;
+  skipped: number;
+  failed: number;
+  started_at: string | null;
+  finished_at: string | null;
+  duration_seconds: number | null;
+}
+
+export async function getPlexHistory(limit = 20): Promise<PlexSyncHistoryEntry[]> {
+  return fetchAPI<PlexSyncHistoryEntry[]>(`/plex/history?limit=${limit}`);
+}

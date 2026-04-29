@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   getImportSessions,
   startBulkImport,
@@ -8,8 +9,6 @@ import {
   verifyArtwork,
   getImportLogs,
   getPlexStatus,
-  startPlexSync,
-  startPlexRefresh,
   ImportSessionSummary,
   ArtworkVerifyResult,
   ImportLogEntry,
@@ -56,13 +55,6 @@ export default function AdminPage() {
   const [backfillLoading, setBackfillLoading] = useState(false);
 
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
-  const [plexLoading, setPlexLoading] = useState(false);
-  const [plexSyncStatus, setPlexSyncStatus] = useState<string | null>(null);
-  const [plexRefreshStatus, setPlexRefreshStatus] = useState<string | null>(null);
-  const [plexSyncProgress, setPlexSyncProgress] = useState<{
-    imported: number; skipped: number; failed: number; total: number; current_title?: string;
-  } | null>(null);
-  const plexSseRef = useRef<EventSource | null>(null);
 
   const sseRef = useRef<EventSource | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -74,7 +66,6 @@ export default function AdminPage() {
     return () => {
       sseRef.current?.close();
       logStreamRef.current?.close();
-      plexSseRef.current?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -210,63 +201,6 @@ export default function AdminPage() {
       setPlexStatus(await getPlexStatus());
     } catch {
       setPlexStatus(null);
-    }
-  }
-
-  function connectPlexSSE(sessionId: number) {
-    if (plexSseRef.current) plexSseRef.current.close();
-    const es = new EventSource(`${API_URL}/plex/progress/${sessionId}`);
-    plexSseRef.current = es;
-    es.addEventListener("progress", (e) => {
-      const d = JSON.parse((e as MessageEvent).data);
-      setPlexSyncProgress({
-        imported: d.imported ?? 0,
-        skipped: d.skipped ?? 0,
-        failed: d.failed ?? 0,
-        total: d.total ?? 0,
-        current_title: d.current_title,
-      });
-    });
-    es.addEventListener("complete", () => {
-      es.close();
-      plexSseRef.current = null;
-      setPlexSyncStatus("Sync complete.");
-      setPlexSyncProgress(null);
-      loadPlexStatus();
-      loadSessions();
-    });
-    es.onerror = () => {
-      es.close();
-      plexSseRef.current = null;
-    };
-  }
-
-  async function handlePlexSync(libraryKey?: string) {
-    setPlexLoading(true);
-    setPlexSyncStatus("Starting Plex sync...");
-    setPlexSyncProgress(null);
-    try {
-      const res = await startPlexSync(libraryKey);
-      setPlexSyncStatus(`Syncing — session #${res.session_id}`);
-      connectPlexSSE(res.session_id);
-    } catch (err: unknown) {
-      setPlexSyncStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setPlexLoading(false);
-    }
-  }
-
-  async function handlePlexRefresh(mediaType: "movie" | "show") {
-    setPlexLoading(true);
-    setPlexRefreshStatus(`Refreshing ${mediaType} artwork...`);
-    try {
-      const res = await startPlexRefresh(mediaType);
-      setPlexRefreshStatus(`Refreshing — session #${res.session_id}`);
-      connectPlexSSE(res.session_id);
-    } catch (err: unknown) {
-      setPlexRefreshStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setPlexLoading(false);
     }
   }
 
@@ -407,126 +341,40 @@ export default function AdminPage() {
         {backfillStatus && <p className="text-sm text-gray-600 dark:text-gray-400">{backfillStatus}</p>}
       </section>
 
-      {/* Plex Integration */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+      {/* Plex Integration — Compact Widget */}
+      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Plex Integration</h2>
-          <button onClick={loadPlexStatus} className="text-xs text-nexus-accent hover:underline">
-            Refresh
-          </button>
+          <Link
+            href="/admin/plex"
+            className="text-sm text-nexus-accent hover:underline flex items-center gap-1"
+          >
+            Open Plex Dashboard &rarr;
+          </Link>
         </div>
-
-        {plexStatus === null ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Loading Plex status...</p>
-        ) : !plexStatus.configured ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Plex not configured. Set <code className="text-nexus-accent">PLEX_URL</code> and{" "}
-            <code className="text-nexus-accent">PLEX_TOKEN</code> in your environment.
-          </p>
-        ) : (
-          <>
-            <div className="flex items-center gap-3 text-sm">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              <span className="text-gray-600 dark:text-gray-300">Connected to {plexStatus.url}</span>
+        <div className="flex items-center gap-4 text-sm">
+          {plexStatus?.configured ? (
+            <>
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-gray-600 dark:text-gray-300">Connected</span>
+              </span>
+              <span className="text-gray-400 dark:text-gray-500">
+                {plexStatus.libraries.length} libraries
+              </span>
               {plexStatus.last_sync && (
                 <span className="text-gray-400 dark:text-gray-500 ml-auto">
                   Last sync: {new Date(plexStatus.last_sync).toLocaleString()}
                 </span>
               )}
-            </div>
-
-            {plexStatus.libraries.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Libraries</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {plexStatus.libraries.map((lib) => (
-                    <button
-                      key={lib.key}
-                      onClick={() => handlePlexSync(lib.key)}
-                      disabled={plexLoading}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-[#2A2A2A] hover:border-nexus-accent dark:hover:border-nexus-accent text-sm transition-colors disabled:opacity-50"
-                    >
-                      <span className="text-gray-700 dark:text-gray-300">
-                        {lib.title}
-                        <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
-                          ({lib.type})
-                        </span>
-                      </span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500">{lib.count}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => handlePlexSync()}
-                disabled={plexLoading}
-                className="px-4 py-2 rounded-lg bg-nexus-accent text-nexus-bg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                {plexLoading ? "Syncing..." : "Sync All Libraries"}
-              </button>
-              <button
-                onClick={() => handlePlexRefresh("movie")}
-                disabled={plexLoading}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-[#2A2A2A] text-gray-700 dark:text-gray-300 text-sm hover:border-nexus-accent dark:hover:border-nexus-accent transition-colors disabled:opacity-50"
-              >
-                Refresh Movie Art
-              </button>
-              <button
-                onClick={() => handlePlexRefresh("show")}
-                disabled={plexLoading}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-[#2A2A2A] text-gray-700 dark:text-gray-300 text-sm hover:border-nexus-accent dark:hover:border-nexus-accent transition-colors disabled:opacity-50"
-              >
-                Refresh TV Art
-              </button>
-            </div>
-
-            {plexSyncProgress && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-                  <span>
-                    {(plexSyncProgress.imported + plexSyncProgress.skipped + plexSyncProgress.failed).toLocaleString()} / {plexSyncProgress.total.toLocaleString()}
-                  </span>
-                  <span>
-                    {plexSyncProgress.total > 0
-                      ? Math.round(((plexSyncProgress.imported + plexSyncProgress.skipped + plexSyncProgress.failed) / plexSyncProgress.total) * 100)
-                      : 0}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-[#2A2A2A] rounded-full h-2">
-                  <div
-                    className="bg-nexus-accent h-2 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${plexSyncProgress.total > 0 ? Math.round(((plexSyncProgress.imported + plexSyncProgress.skipped + plexSyncProgress.failed) / plexSyncProgress.total) * 100) : 0}%`,
-                    }}
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-xs text-center">
-                  <div>
-                    <div className="font-bold text-green-500">{plexSyncProgress.imported}</div>
-                    <div className="text-gray-500 dark:text-gray-400">Added</div>
-                  </div>
-                  <div>
-                    <div className="font-bold text-yellow-400">{plexSyncProgress.skipped}</div>
-                    <div className="text-gray-500 dark:text-gray-400">Skipped</div>
-                  </div>
-                  <div>
-                    <div className="font-bold text-red-400">{plexSyncProgress.failed}</div>
-                    <div className="text-gray-500 dark:text-gray-400">Failed</div>
-                  </div>
-                </div>
-                {plexSyncProgress.current_title && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{plexSyncProgress.current_title}</p>
-                )}
-              </div>
-            )}
-
-            {plexSyncStatus && <p className="text-sm text-gray-600 dark:text-gray-400">{plexSyncStatus}</p>}
-            {plexRefreshStatus && <p className="text-sm text-gray-600 dark:text-gray-400">{plexRefreshStatus}</p>}
-          </>
-        )}
+            </>
+          ) : (
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-400" />
+              <span className="text-gray-500">Not configured</span>
+            </span>
+          )}
+        </div>
       </section>
 
       {/* Session History */}
