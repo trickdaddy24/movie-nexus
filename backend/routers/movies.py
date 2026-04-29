@@ -16,7 +16,7 @@ router = APIRouter(prefix="/movies", tags=["Movies"])
 @router.get("", response_model=PaginatedResponse)
 async def list_movies(
     page: int = Query(1, ge=1),
-    per_page: int = Query(25, ge=1, le=100),
+    per_page: int = Query(24, ge=1, le=100),
     sort: str = Query("added_at", regex="^(title|release_date|rating_tmdb|rating_imdb|popularity|added_at)$"),
     order: str = Query("desc", regex="^(asc|desc)$"),
     genre: str | None = None,

@@ -19,7 +19,7 @@ router = APIRouter(prefix="/shows", tags=["TV Shows"])
 @router.get("", response_model=PaginatedResponse)
 async def list_shows(
     page: int = Query(1, ge=1),
-    per_page: int = Query(25, ge=1, le=100),
+    per_page: int = Query(24, ge=1, le=100),
     sort: str = Query("added_at", regex="^(title|first_air_date|rating_tmdb|popularity|added_at)$"),
     order: str = Query("desc", regex="^(asc|desc)$"),
     genre: str | None = None,
