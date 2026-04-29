@@ -25,6 +25,8 @@ export interface MovieBrief {
   genres: Genre[];
   added_at: string | null;
   poster_url: string | null;
+  origin_country: string | null;
+  original_language: string | null;
 }
 
 export interface MovieDetail extends MovieBrief {
@@ -79,6 +81,8 @@ export interface TVShowBrief {
   genres: Genre[];
   added_at: string | null;
   poster_url: string | null;
+  origin_country: string | null;
+  original_language: string | null;
 }
 
 export interface TVShowDetail extends TVShowBrief {
@@ -135,9 +139,10 @@ export interface Stats {
 export async function getMovies(
   page = 1,
   sort = "added_at",
-  order = "desc"
+  order = "desc",
+  category = "all"
 ): Promise<PaginatedResponse<MovieBrief>> {
-  return fetchAPI(`/movies?page=${page}&sort=${sort}&order=${order}`);
+  return fetchAPI(`/movies?page=${page}&sort=${sort}&order=${order}&category=${category}`);
 }
 
 export async function getMovie(nexusId: string): Promise<MovieDetail> {
@@ -147,9 +152,10 @@ export async function getMovie(nexusId: string): Promise<MovieDetail> {
 export async function getShows(
   page = 1,
   sort = "added_at",
-  order = "desc"
+  order = "desc",
+  category = "all"
 ): Promise<PaginatedResponse<TVShowBrief>> {
-  return fetchAPI(`/shows?page=${page}&sort=${sort}&order=${order}`);
+  return fetchAPI(`/shows?page=${page}&sort=${sort}&order=${order}&category=${category}`);
 }
 
 export async function getShow(nexusId: string): Promise<TVShowDetail> {
@@ -202,10 +208,11 @@ export async function getImportSessions(limit = 20): Promise<ImportSessionSummar
 
 export async function startBulkImport(
   media_type: "movie" | "show",
-  pages: number
+  pages: number,
+  category = "all"
 ): Promise<BulkStartResponse> {
   return fetchAPI<BulkStartResponse>(
-    `/import/bulk/start?media_type=${media_type}&pages=${pages}`,
+    `/import/bulk/start?media_type=${media_type}&pages=${pages}&category=${category}`,
     { method: "POST" }
   );
 }
@@ -238,4 +245,13 @@ export async function getImportLogs(
   const params = new URLSearchParams({ limit: String(limit) });
   if (session_id !== undefined) params.set("session_id", String(session_id));
   return fetchAPI<ImportLogEntry[]>(`/admin/logs?${params}`);
+}
+
+export async function startBackfill(
+  media_type: "movie" | "show"
+): Promise<{ message: string }> {
+  return fetchAPI<{ message: string }>(
+    `/admin/backfill/origin?media_type=${media_type}`,
+    { method: "POST" }
+  );
 }

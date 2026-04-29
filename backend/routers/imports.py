@@ -23,6 +23,18 @@ router = APIRouter(prefix="/import", tags=["Import"])
 
 _active_jobs: dict[int, dict] = {}
 
+CATEGORY_FILTERS: dict[str, dict] = {
+    "all":         {},
+    "usa":         {"with_origin_country": "US"},
+    "anime":       {"with_original_language": "ja", "with_genres": "16"},
+    "korean":      {"with_origin_country": "KR"},
+    "indian":      {"with_origin_country": "IN"},
+    "documentary": {"with_genres": "99"},
+    "kids":        {"with_origin_country": "US", "with_genres": "10751"},
+    # "foreign" imports everything; category filtering happens at query time via apply_category_filter()
+    "foreign":     {},
+}
+
 
 def _parse_date(date_str: str | None) -> date | None:
     if not date_str:
@@ -84,6 +96,10 @@ async def _import_single_movie(db: AsyncSession, tmdb_id: int) -> str:
                     content_rating = rel["certification"]
                     break
 
+    # TMDb /movie/{id} returns production_countries as list of dicts: [{"iso_3166_1": "US", ...}]
+    origin_country    = ",".join(c["iso_3166_1"] for c in data.get("production_countries", []))
+    original_language = data.get("original_language", "")
+
     movie = Movie(
         nexus_id=nexus_id,
         tmdb_id=tmdb_id,
@@ -102,6 +118,8 @@ async def _import_single_movie(db: AsyncSession, tmdb_id: int) -> str:
         budget=data.get("budget", 0),
         revenue=data.get("revenue", 0),
         homepage=data.get("homepage"),
+        origin_country=origin_country,
+        original_language=original_language,
     )
     db.add(movie)
     await db.flush()
@@ -176,6 +194,10 @@ async def _import_single_show(db: AsyncSession, tmdb_id: int) -> str:
 
     ext_ids = data.get("external_ids", {})
 
+    # TMDb /tv/{id} returns origin_country as flat list of strings: ["US", "GB"]
+    origin_country    = ",".join(data.get("origin_country", []))
+    original_language = data.get("original_language", "")
+
     show = TVShow(
         nexus_id=nexus_id,
         tmdb_id=tmdb_id,
@@ -194,6 +216,8 @@ async def _import_single_show(db: AsyncSession, tmdb_id: int) -> str:
         content_rating=content_rating,
         popularity=data.get("popularity", 0),
         homepage=data.get("homepage"),
+        origin_country=origin_country,
+        original_language=original_language,
     )
     db.add(show)
     await db.flush()
@@ -316,7 +340,7 @@ async def _run_import(session_id: int, media_type: str, tmdb_ids: list[int]):
     progress["status"] = "completed"
 
 
-async def _run_bulk_crawl(session_id: int, media_type: str, total_pages: int):
+async def _run_bulk_crawl(session_id: int, media_type: str, total_pages: int, tmdb_filters: dict | None = None):
     """Crawl TMDb discover pages and import everything. Telegram every 10k records."""
     progress = _active_jobs[session_id]
     imported_total = 0
@@ -327,10 +351,11 @@ async def _run_bulk_crawl(session_id: int, media_type: str, total_pages: int):
     async with async_session() as db:
         for page in range(1, total_pages + 1):
             try:
+                extra = tmdb_filters or {}
                 if media_type == "movie":
-                    data = await tmdb_client.discover_movies(page=page, sort_by="popularity.desc")
+                    data = await tmdb_client.discover_movies(page=page, sort_by="popularity.desc", **extra)
                 else:
-                    data = await tmdb_client.discover_tv(page=page, sort_by="popularity.desc")
+                    data = await tmdb_client.discover_tv(page=page, sort_by="popularity.desc", **extra)
             except Exception as e:
                 logger.error(f"Discover page {page} failed: {e}")
                 progress["failed"] += 1
@@ -533,6 +558,7 @@ async def import_discover_shows(
 async def start_bulk_import(
     media_type: str = Query("movie", regex="^(movie|show)$"),
     pages: int = Query(2500, ge=1, le=5000),
+    category: str = Query("all", regex="^(all|usa|anime|korean|indian|documentary|kids|foreign)$"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -564,10 +590,12 @@ async def start_bulk_import(
         "current_title": "",
     }
 
-    asyncio.create_task(_run_bulk_crawl(session.id, media_type, pages))
+    tmdb_filters = CATEGORY_FILTERS.get(category, {})
+    logger.info(f"Bulk {media_type} import started: category={category}, filters={tmdb_filters}, pages={pages}")
+    asyncio.create_task(_run_bulk_crawl(session.id, media_type, pages, tmdb_filters))
     return {
         "session_id": session.id,
-        "message": f"Bulk {media_type} crawl started ({pages} pages, ~{estimated:,} titles)",
+        "message": f"Bulk {media_type} crawl started ({pages} pages, category={category}, ~{estimated:,} titles)",
     }
 
 

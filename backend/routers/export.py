@@ -33,6 +33,8 @@ async def _get_movies_data(db: AsyncSession) -> list[dict]:
             "rating_trakt": m.rating_trakt,
             "content_rating": m.content_rating,
             "popularity": m.popularity,
+            "origin_country": m.origin_country or "",
+            "original_language": m.original_language or "",
             "genres": [g.name for g in m.genres],
         }
         for m in movies
@@ -58,6 +60,8 @@ async def _get_shows_data(db: AsyncSession) -> list[dict]:
             "rating_trakt": s.rating_trakt,
             "content_rating": s.content_rating,
             "popularity": s.popularity,
+            "origin_country": s.origin_country or "",
+            "original_language": s.original_language or "",
             "genres": [g.name for g in s.show_genres],
         }
         for s in shows

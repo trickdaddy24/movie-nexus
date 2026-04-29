@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   getImportSessions,
   startBulkImport,
+  startBackfill,
   verifyArtwork,
   getImportLogs,
   ImportSessionSummary,
@@ -16,6 +17,16 @@ const API_URL =
     ? process.env.NEXT_PUBLIC_API_URL || "/api"
     : "/api";
 
+const IMPORT_CATEGORIES = [
+  { id: "all",         label: "All",         emoji: "🌐", desc: "all titles" },
+  { id: "usa",         label: "USA",          emoji: "🇺🇸", desc: "US origin" },
+  { id: "anime",       label: "Anime",        emoji: "⛩️", desc: "Japanese Animation" },
+  { id: "korean",      label: "Korean",       emoji: "🇰🇷", desc: "Korean origin" },
+  { id: "indian",      label: "Indian",       emoji: "🇮🇳", desc: "Indian origin" },
+  { id: "documentary", label: "Documentary",  emoji: "📽️", desc: "Documentary genre" },
+  { id: "kids",        label: "Kids",         emoji: "👶", desc: "US Family/Animation" },
+] as const;
+
 export default function AdminPage() {
   const [sessions, setSessions] = useState<ImportSessionSummary[]>([]);
   const [liveProgress, setLiveProgress] = useState<{
@@ -27,8 +38,9 @@ export default function AdminPage() {
   } | null>(null);
   const [artworkResults, setArtworkResults] = useState<ArtworkVerifyResult[]>([]);
   const [artworkLoading, setArtworkLoading] = useState(false);
-  const [startForm, setStartForm] = useState({ media_type: "movie", pages: 100 });
+  const [startForm, setStartForm] = useState({ media_type: "movie", pages: 100, category: "all" });
   const [startStatus, setStartStatus] = useState<string | null>(null);
+  const [backfillStatus, setBackfillStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [logs, setLogs] = useState<ImportLogEntry[]>([]);
@@ -36,6 +48,8 @@ export default function AdminPage() {
   const [logSession, setLogSession] = useState<number | undefined>(undefined);
   const [liveLogLines, setLiveLogLines] = useState<string[]>([]);
   const logStreamRef = useRef<EventSource | null>(null);
+
+  const [backfillLoading, setBackfillLoading] = useState(false);
 
   const sseRef = useRef<EventSource | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -144,12 +158,26 @@ export default function AdminPage() {
     try {
       const res = await startBulkImport(
         startForm.media_type as "movie" | "show",
-        startForm.pages
+        startForm.pages,
+        startForm.category
       );
       setStartStatus(`Started — session #${res.session_id}`);
       await loadSessions();
     } catch (err: unknown) {
       setStartStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function handleBackfill(media_type: "movie" | "show") {
+    setBackfillLoading(true);
+    setBackfillStatus(`Starting backfill for ${media_type}s…`);
+    try {
+      const res = await startBackfill(media_type);
+      setBackfillStatus(res.message);
+    } catch (err: unknown) {
+      setBackfillStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setBackfillLoading(false);
     }
   }
 
@@ -217,6 +245,18 @@ export default function AdminPage() {
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Start Bulk Import</h2>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Category</label>
+            <select
+              value={startForm.category}
+              onChange={(e) => setStartForm({ ...startForm, category: e.target.value })}
+              className="rounded-lg border border-gray-300 dark:border-nexus-border bg-white dark:bg-nexus-bg text-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+            >
+              {IMPORT_CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Media Type</label>
             <select
               value={startForm.media_type}
@@ -242,10 +282,49 @@ export default function AdminPage() {
             onClick={handleStart}
             className="px-5 py-2 rounded-lg bg-nexus-accent text-nexus-bg font-semibold text-sm hover:opacity-90 transition-opacity"
           >
-            Start
+            ▶ Start
           </button>
         </div>
+        {(() => {
+          const cat = IMPORT_CATEGORIES.find((c) => c.id === startForm.category);
+          const type = startForm.media_type === "movie" ? "movies" : "TV shows";
+          const approx = (startForm.pages * 20).toLocaleString();
+          return (
+            <div className="rounded-lg bg-nexus-accent/5 border border-nexus-accent/20 px-4 py-2 text-sm text-gray-600 dark:text-[#94A3B8]">
+              {cat?.emoji} Will import up to{" "}
+              <strong className="text-nexus-accent">~{approx} {cat?.label} {type}</strong>
+              {" "}from TMDb ({cat?.desc})
+            </div>
+          );
+        })()}
         {startStatus && <p className="text-sm text-gray-600 dark:text-gray-400">{startStatus}</p>}
+      </section>
+
+      {/* Backfill Origin Data */}
+      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Backfill Origin Data</h2>
+        <p className="text-sm text-gray-500 dark:text-[#94A3B8]">
+          Fetch and store <code className="text-nexus-accent">origin_country</code> +{" "}
+          <code className="text-nexus-accent">original_language</code> for existing records that are missing this data.
+          Run once after deploying the categories feature.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleBackfill("movie")}
+            disabled={backfillLoading}
+            className="px-4 py-2 rounded-lg bg-nexus-accent text-nexus-bg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {backfillLoading ? "Backfilling…" : "Backfill Movies"}
+          </button>
+          <button
+            onClick={() => handleBackfill("show")}
+            disabled={backfillLoading}
+            className="px-4 py-2 rounded-lg bg-nexus-accent text-nexus-bg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {backfillLoading ? "Backfilling…" : "Backfill TV Shows"}
+          </button>
+        </div>
+        {backfillStatus && <p className="text-sm text-gray-600 dark:text-gray-400">{backfillStatus}</p>}
       </section>
 
       {/* Session History */}

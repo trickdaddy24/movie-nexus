@@ -1,12 +1,13 @@
 import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
 from models import Movie, Genre, Artwork, Credit, ExternalID
+from routers._filters import apply_category_filter
 from schemas import MovieBrief, MovieDetail, GenreOut, PaginatedResponse
 
 router = APIRouter(prefix="/movies", tags=["Movies"])
@@ -20,6 +21,7 @@ async def list_movies(
     order: str = Query("desc", regex="^(asc|desc)$"),
     genre: str | None = None,
     year: int | None = None,
+    category: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(Movie).options(selectinload(Movie.genres))
@@ -29,8 +31,18 @@ async def list_movies(
     if year:
         query = query.where(func.extract("year", Movie.release_date) == year)
 
-    sort_col = getattr(Movie, sort)
-    query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
+    # Category filter
+    query = apply_category_filter(query, Movie, Genre, Genre.movie_id, category)
+
+    # Ordering: USA-first when no explicit sort override (default sort) and no category active
+    if sort == "added_at" and (category is None or category == "all"):
+        usa_first = case((Movie.origin_country.like("%US%"), 0), else_=1)
+        query = query.order_by(usa_first, Movie.popularity.desc())
+    else:
+        sort_col = getattr(Movie, sort)
+        query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
+
+    query = query.distinct()  # prevent duplicates from multiple genre joins
 
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0

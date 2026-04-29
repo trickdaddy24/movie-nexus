@@ -5,6 +5,26 @@ All notable changes to MovieNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-04-28
+
+### Added
+- 8 browsing categories: All, USA, Foreign, Anime, Korean, Indian, Documentary, Kids
+- Category tab bar on `/movies` and `/shows` pages (URL param `?category=`, shareable)
+- Origin badge (flag + country name) on every MediaCard
+- Origin detail section on movie and show detail pages (flag, country, language, category badge)
+- `origin_country` and `original_language` columns on Movie and TVShow models
+- Category-filtered bulk imports via TMDb Discover API (`?category=anime`, etc.)
+- USA-first default sort on "All" tab (US content surfaces first)
+- Backfill endpoint (`POST /api/admin/backfill/origin`) to populate origin data for existing records
+- Backfill buttons in Admin UI with loading state
+- Admin bulk import form: Category dropdown + preview line showing estimated import count
+- `origin_country` and `original_language` fields in all export formats (JSON/CSV/XML)
+- Shared `src/lib/origin.ts` (COUNTRY_MAP, LANGUAGE_MAP, getCategoryLabel)
+
+### Fixed
+- Dark mode color contrast: replaced `#64748B`/`nexus-muted` text with `#94A3B8` across MediaCard, movie detail, and show detail pages
+- Genre tag borders in dark mode: `#1E2A5A` → `#2D3A6B` for better readability
+
 ## [Unreleased]
 
 ### Planned for v0.1.0

@@ -15,7 +15,7 @@ from api.fanart import fanart_client
 from nexus_id import ensure_counter_table
 from scheduler import scheduler, setup_scheduler
 from routers import movies, shows, imports, search, export, stats
-from routers import trending, admin
+from routers import trending, admin, backfill
 
 # In-memory circular log buffer — last 1000 lines, streamed to admin UI
 _LOG_BUFFER: collections.deque = collections.deque(maxlen=1000)
@@ -107,6 +107,7 @@ app.include_router(export.router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
 app.include_router(trending.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(backfill.router, prefix="/api")
 
 
 @app.get("/api/health")

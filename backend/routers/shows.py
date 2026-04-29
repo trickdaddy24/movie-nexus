@@ -1,12 +1,13 @@
 import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
 from models import TVShow, ShowGenre, Season, Episode, Artwork
+from routers._filters import apply_category_filter
 from schemas import (
     TVShowBrief, TVShowDetail, GenreOut, SeasonOut, EpisodeOut,
     PaginatedResponse,
@@ -23,6 +24,7 @@ async def list_shows(
     order: str = Query("desc", regex="^(asc|desc)$"),
     genre: str | None = None,
     status: str | None = None,
+    category: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(TVShow).options(selectinload(TVShow.show_genres))
@@ -32,8 +34,18 @@ async def list_shows(
     if status:
         query = query.where(TVShow.status.ilike(status))
 
-    sort_col = getattr(TVShow, sort)
-    query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
+    # Category filter
+    query = apply_category_filter(query, TVShow, ShowGenre, ShowGenre.show_id, category)
+
+    # Ordering: USA-first when no explicit sort override (default sort) and no category active
+    if sort == "added_at" and (category is None or category == "all"):
+        usa_first = case((TVShow.origin_country.like("%US%"), 0), else_=1)
+        query = query.order_by(usa_first, TVShow.popularity.desc())
+    else:
+        sort_col = getattr(TVShow, sort)
+        query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
+
+    query = query.distinct()  # prevent duplicates from multiple genre joins
 
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0

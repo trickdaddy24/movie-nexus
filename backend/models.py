@@ -30,6 +30,8 @@ class Movie(Base):
     budget = Column(Integer, default=0)
     revenue = Column(Integer, default=0)
     homepage = Column(Text)
+    origin_country = Column(String(100))
+    original_language = Column(String(10))
     added_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -37,6 +39,8 @@ class Movie(Base):
 
     __table_args__ = (
         Index("ix_movies_title_year", "title", "release_date"),
+        Index("ix_movies_country", "origin_country"),
+        Index("ix_movies_language", "original_language"),
     )
 
 
@@ -63,6 +67,8 @@ class TVShow(Base):
     content_rating = Column(String(10))
     popularity = Column(Float, default=0)
     homepage = Column(Text)
+    origin_country = Column(String(100))
+    original_language = Column(String(10))
     added_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -71,6 +77,8 @@ class TVShow(Base):
 
     __table_args__ = (
         Index("ix_tv_shows_title_year", "title", "first_air_date"),
+        Index("ix_tv_shows_country", "origin_country"),
+        Index("ix_tv_shows_language", "original_language"),
     )
 
 
