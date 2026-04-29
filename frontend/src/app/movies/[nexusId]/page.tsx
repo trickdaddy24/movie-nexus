@@ -131,6 +131,40 @@ export default async function MovieDetailPage({
               })}
           </div>
 
+          {/* IDs */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-nexus-muted dark:text-[#A1A1A1]">
+            <span>
+              <span className="font-semibold text-[#111827] dark:text-white">Nexus</span>{" "}
+              <span className="font-mono">{movie.nexus_id}</span>
+            </span>
+            {movie.tmdb_id && (
+              <span>
+                <span className="font-semibold text-[#111827] dark:text-white">TMDb</span>{" "}
+                <a
+                  href={`https://www.themoviedb.org/movie/${movie.tmdb_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono hover:text-nexus-accent dark:hover:text-[#39FFEE] transition"
+                >
+                  {movie.tmdb_id}
+                </a>
+              </span>
+            )}
+            {movie.imdb_id && (
+              <span>
+                <span className="font-semibold text-[#111827] dark:text-white">IMDb</span>{" "}
+                <a
+                  href={`https://www.imdb.com/title/${movie.imdb_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono hover:text-nexus-accent dark:hover:text-[#39FFEE] transition"
+                >
+                  {movie.imdb_id}
+                </a>
+              </span>
+            )}
+          </div>
+
           {/* Origin */}
           {country && (
             <div className="flex items-center gap-2">
@@ -153,12 +187,13 @@ export default async function MovieDetailPage({
           {movie.genres.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {movie.genres.map((g) => (
-                <span
+                <Link
                   key={g.name}
-                  className="rounded-full border border-nexus-border dark:border-[#2A2A2A] bg-nexus-card dark:bg-[#1C1C1E] px-3 py-1 text-xs font-medium text-nexus-muted dark:text-[#A1A1A1]"
+                  href={`/movies?genre=${encodeURIComponent(g.name)}`}
+                  className="rounded-full border border-nexus-border dark:border-[#2A2A2A] bg-nexus-card dark:bg-[#1C1C1E] px-3 py-1 text-xs font-medium text-nexus-muted dark:text-[#A1A1A1] hover:border-nexus-accent hover:text-nexus-accent dark:hover:border-[#39FFEE] dark:hover:text-[#39FFEE] transition"
                 >
                   {g.name}
-                </span>
+                </Link>
               ))}
             </div>
           )}
@@ -178,7 +213,7 @@ export default async function MovieDetailPage({
       )}
 
       {/* Stats grid */}
-      {(movie.budget > 0 || movie.revenue > 0 || movie.vote_count_tmdb > 0 || movie.imdb_id) && (
+      {(movie.budget > 0 || movie.revenue > 0 || movie.vote_count_tmdb > 0) && (
         <section className="mb-8">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-nexus-accent dark:text-[#39FFEE] mb-3">
             Details
@@ -193,16 +228,12 @@ export default async function MovieDetailPage({
             {movie.vote_count_tmdb > 0 && (
               <StatCard label="TMDb Votes" value={movie.vote_count_tmdb.toLocaleString()} />
             )}
-            {movie.imdb_id && (
-              <StatCard label="IMDb ID" value={movie.imdb_id} mono />
-            )}
           </div>
         </section>
       )}
 
       {/* Footer meta */}
       <div className="border-t border-nexus-border dark:border-[#2A2A2A] pt-4 flex flex-wrap gap-4 text-xs text-nexus-muted dark:text-[#A1A1A1]">
-        <span className="font-mono text-nexus-accent/50 dark:text-[#39FFEE]/40">{movie.nexus_id}</span>
         {movie.added_at && (
           <span>Added {new Date(movie.added_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span>
         )}

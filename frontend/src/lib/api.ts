@@ -140,9 +140,12 @@ export async function getMovies(
   page = 1,
   sort = "added_at",
   order = "desc",
-  category = "all"
+  category = "all",
+  genre?: string
 ): Promise<PaginatedResponse<MovieBrief>> {
-  return fetchAPI(`/movies?page=${page}&sort=${sort}&order=${order}&category=${category}`);
+  let url = `/movies?page=${page}&sort=${sort}&order=${order}&category=${category}`;
+  if (genre) url += `&genre=${encodeURIComponent(genre)}`;
+  return fetchAPI(url);
 }
 
 export async function getMovie(nexusId: string): Promise<MovieDetail> {
@@ -153,9 +156,12 @@ export async function getShows(
   page = 1,
   sort = "added_at",
   order = "desc",
-  category = "all"
+  category = "all",
+  genre?: string
 ): Promise<PaginatedResponse<TVShowBrief>> {
-  return fetchAPI(`/shows?page=${page}&sort=${sort}&order=${order}&category=${category}`);
+  let url = `/shows?page=${page}&sort=${sort}&order=${order}&category=${category}`;
+  if (genre) url += `&genre=${encodeURIComponent(genre)}`;
+  return fetchAPI(url);
 }
 
 export async function getShow(nexusId: string): Promise<TVShowDetail> {
@@ -252,6 +258,15 @@ export async function startBackfill(
 ): Promise<{ message: string }> {
   return fetchAPI<{ message: string }>(
     `/admin/backfill/origin?media_type=${media_type}`,
+    { method: "POST" }
+  );
+}
+
+export async function startArtworkBackfill(
+  media_type: "movie" | "show"
+): Promise<{ message: string }> {
+  return fetchAPI<{ message: string }>(
+    `/admin/backfill/artwork?media_type=${media_type}`,
     { method: "POST" }
   );
 }

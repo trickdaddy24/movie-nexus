@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import RatingBadge from "./RatingBadge";
 import { COUNTRY_MAP } from "@/lib/origin";
@@ -17,6 +18,7 @@ interface MediaCardProps {
   posterUrl?: string | null;
   originCountry?: string | null;
   originalLanguage?: string | null;
+  mediaType?: "movie" | "show";
 }
 
 export default function MediaCard({
@@ -29,10 +31,13 @@ export default function MediaCard({
   posterUrl,
   originCountry,
   originalLanguage: _originalLanguage,
+  mediaType,
 }: MediaCardProps) {
   const yearStr = year ? new Date(year).getFullYear() : null;
   const [imgError, setImgError] = useState(false);
   const thumbUrl = posterUrl?.replace("/original/", "/w342/");
+  const router = useRouter();
+  const genreBase = mediaType === "show" ? "/shows" : "/movies";
 
   return (
     <Link
@@ -88,12 +93,17 @@ export default function MediaCard({
         {genres.length > 0 && (
           <div className="mt-auto flex flex-wrap gap-1 pt-2">
             {genres.slice(0, 3).map((g) => (
-              <span
+              <button
                 key={g.name}
-                className="rounded-full bg-[#F0F9FF] px-2 py-0.5 text-[10px] text-[#0891B2] border border-[#CCE8F0] dark:bg-[#2A2A2A] dark:text-[#A1A1A1] dark:border-[#3A3A3A]"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  router.push(`${genreBase}?genre=${encodeURIComponent(g.name)}`);
+                }}
+                className="rounded-full bg-[#F0F9FF] px-2 py-0.5 text-[10px] text-[#0891B2] border border-[#CCE8F0] hover:bg-[#0891B2] hover:text-white hover:border-[#0891B2] transition dark:bg-[#2A2A2A] dark:text-[#A1A1A1] dark:border-[#3A3A3A] dark:hover:bg-[#39FFEE] dark:hover:text-[#0A0A0A] dark:hover:border-[#39FFEE]"
               >
                 {g.name}
-              </span>
+              </button>
             ))}
           </div>
         )}

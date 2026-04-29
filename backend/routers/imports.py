@@ -244,6 +244,21 @@ async def _import_single_show(db: AsyncSession, tmdb_id: int) -> str:
             type="poster", url=f"https://image.tmdb.org/t/p/original{img['file_path']}",
             language=img.get("iso_639_1"),
         ))
+    for img in data.get("images", {}).get("backdrops", [])[:5]:
+        db.add(Artwork(
+            media_type="show", media_id=show.id, source="tmdb",
+            type="backdrop", url=f"https://image.tmdb.org/t/p/original{img['file_path']}",
+            language=img.get("iso_639_1"),
+        ))
+
+    tvdb_id = ext_ids.get("tvdb_id")
+    if tvdb_id:
+        try:
+            fanart_data = await fanart_client.get_tv_images(tvdb_id)
+            for art in fanart_client.parse_images(fanart_data, "show")[:10]:
+                db.add(Artwork(media_type="show", media_id=show.id, **art))
+        except Exception:
+            pass
 
     for season_data in data.get("seasons", []):
         sn = season_data["season_number"]

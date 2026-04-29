@@ -2,6 +2,7 @@ import { getShow } from "@/lib/api";
 import RatingBadge from "@/components/RatingBadge";
 import { notFound } from "next/navigation";
 import { COUNTRY_MAP, LANGUAGE_MAP, getCategoryLabel } from "@/lib/origin";
+import Link from "next/link";
 
 export default async function ShowDetailPage({
   params,
@@ -33,7 +34,6 @@ export default async function ShowDetailPage({
               {show.content_rating}
             </span>
           )}
-          <span className="font-mono text-xs text-nexus-accent/60">{show.nexus_id}</span>
         </div>
       </div>
 
@@ -41,6 +41,53 @@ export default async function ShowDetailPage({
         <RatingBadge rating={show.rating_tmdb} label="TMDb" />
         <RatingBadge rating={show.rating_imdb} label="IMDb" />
         <RatingBadge rating={show.rating_trakt} label="Trakt" />
+      </div>
+
+      {/* IDs */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-nexus-muted dark:text-[#A1A1A1]">
+        <span>
+          <span className="font-semibold text-[#111827] dark:text-white">Nexus</span>{" "}
+          <span className="font-mono">{show.nexus_id}</span>
+        </span>
+        {show.tmdb_id && (
+          <span>
+            <span className="font-semibold text-[#111827] dark:text-white">TMDb</span>{" "}
+            <a
+              href={`https://www.themoviedb.org/tv/${show.tmdb_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono hover:text-nexus-accent dark:hover:text-[#39FFEE] transition"
+            >
+              {show.tmdb_id}
+            </a>
+          </span>
+        )}
+        {show.imdb_id && (
+          <span>
+            <span className="font-semibold text-[#111827] dark:text-white">IMDb</span>{" "}
+            <a
+              href={`https://www.imdb.com/title/${show.imdb_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono hover:text-nexus-accent dark:hover:text-[#39FFEE] transition"
+            >
+              {show.imdb_id}
+            </a>
+          </span>
+        )}
+        {show.tvdb_id && (
+          <span>
+            <span className="font-semibold text-[#111827] dark:text-white">TVDB</span>{" "}
+            <a
+              href={`https://thetvdb.com/dereferrer/series/${show.tvdb_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono hover:text-nexus-accent dark:hover:text-[#39FFEE] transition"
+            >
+              {show.tvdb_id}
+            </a>
+          </span>
+        )}
       </div>
 
       {show.origin_country && (() => {
@@ -67,12 +114,13 @@ export default async function ShowDetailPage({
       {show.genres.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {show.genres.map((g) => (
-            <span
+            <Link
               key={g.name}
-              className="rounded-full border border-nexus-border bg-nexus-card px-3 py-1 text-sm dark:bg-[#2A2A2A] dark:text-[#A1A1A1] dark:border-[#3A3A3A]"
+              href={`/shows?genre=${encodeURIComponent(g.name)}`}
+              className="rounded-full border border-nexus-border bg-nexus-card px-3 py-1 text-sm dark:bg-[#2A2A2A] dark:text-[#A1A1A1] dark:border-[#3A3A3A] hover:border-nexus-accent hover:text-nexus-accent dark:hover:border-[#39FFEE] dark:hover:text-[#39FFEE] transition"
             >
               {g.name}
-            </span>
+            </Link>
           ))}
         </div>
       )}

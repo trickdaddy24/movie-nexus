@@ -5,6 +5,21 @@ All notable changes to MovieNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-04-29
+
+### Added
+- Clickable genre tags on media cards and detail pages — navigate to `/movies?genre=X` or `/shows?genre=X`
+- Genre filter chip on list pages with removable pill UI
+- Nexus/TMDb/IMDb/TVDB ID row on movie and TV show detail pages with external links
+- TV show artwork pipeline — Fanart.tv + TMDb backdrops now fetched during import
+- Artwork backfill endpoint (`POST /admin/backfill/artwork`) with throttled Telegram notifications
+- Artwork backfill button on admin page (Backfill Movie Art / Backfill TV Art)
+
+### Fixed
+- Telegram notifications not working — env vars missing from docker-compose.yml
+- Admin page dark mode contrast — section headings and cards now use proper dark colors
+- TV show import missing Fanart.tv artwork and TMDb backdrops
+
 ## [0.7.0] - 2026-04-29
 
 ### Added

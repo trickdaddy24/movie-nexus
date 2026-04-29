@@ -17,17 +17,18 @@ const CATEGORIES = [
 export default async function ShowsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; sort?: string; category?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string; category?: string; genre?: string }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page || "1") || 1);
   const sort = params.sort || "added_at";
   const VALID_CATEGORY_IDS = CATEGORIES.map((c) => c.id);
   const category = VALID_CATEGORY_IDS.includes(params.category ?? "") ? params.category! : "all";
+  const genre = params.genre || undefined;
 
   let data;
   try {
-    data = await getShows(page, sort, "desc", category);
+    data = await getShows(page, sort, "desc", category, genre);
   } catch {
     return (
       <div className="text-center py-20">
@@ -61,6 +62,19 @@ export default async function ShowsPage({
         ))}
       </div>
 
+      {genre && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm text-nexus-muted dark:text-[#A1A1A1]">Filtered by:</span>
+          <a
+            href={`/shows?category=${category}&sort=${sort}`}
+            className="inline-flex items-center gap-1.5 rounded-full bg-nexus-accent/10 border border-nexus-accent/30 px-3 py-1 text-sm font-medium text-nexus-accent dark:text-[#39FFEE] dark:border-[#39FFEE]/30 hover:bg-nexus-accent/20 transition"
+          >
+            {genre}
+            <span className="text-xs opacity-60">&times;</span>
+          </a>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {data.items.map((s) => (
           <MediaCard
@@ -76,33 +90,37 @@ export default async function ShowsPage({
             posterUrl={s.poster_url}
             originCountry={s.origin_country}
             originalLanguage={s.original_language}
+            mediaType="show"
           />
         ))}
       </div>
 
-      {data.pages > 1 && (
-        <div className="mt-8 flex justify-center gap-2">
-          {page > 1 && (
-            <a
-              href={`/shows?page=${page - 1}&sort=${sort}&category=${category}`}
-              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#39FFEE]"
-            >
-              Previous
-            </a>
-          )}
-          <span className="rounded-lg bg-nexus-accent px-4 py-2 text-sm font-medium text-white">
-            {page} / {data.pages}
-          </span>
-          {page < data.pages && (
-            <a
-              href={`/shows?page=${page + 1}&sort=${sort}&category=${category}`}
-              className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#39FFEE]"
-            >
-              Next
-            </a>
-          )}
-        </div>
-      )}
+      {data.pages > 1 && (() => {
+        const qp = `sort=${sort}&category=${category}${genre ? `&genre=${encodeURIComponent(genre)}` : ""}`;
+        return (
+          <div className="mt-8 flex justify-center gap-2">
+            {page > 1 && (
+              <a
+                href={`/shows?page=${page - 1}&${qp}`}
+                className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#39FFEE]"
+              >
+                Previous
+              </a>
+            )}
+            <span className="rounded-lg bg-nexus-accent px-4 py-2 text-sm font-medium text-white">
+              {page} / {data.pages}
+            </span>
+            {page < data.pages && (
+              <a
+                href={`/shows?page=${page + 1}&${qp}`}
+                className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#39FFEE]"
+              >
+                Next
+              </a>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

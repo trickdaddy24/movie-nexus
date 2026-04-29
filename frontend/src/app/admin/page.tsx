@@ -6,6 +6,7 @@ import {
   getImportSessions,
   startBulkImport,
   startBackfill,
+  startArtworkBackfill,
   verifyArtwork,
   getImportLogs,
   getPlexStatus,
@@ -53,6 +54,8 @@ export default function AdminPage() {
   const logStreamRef = useRef<EventSource | null>(null);
 
   const [backfillLoading, setBackfillLoading] = useState(false);
+  const [artBackfillLoading, setArtBackfillLoading] = useState(false);
+  const [artBackfillStatus, setArtBackfillStatus] = useState<string | null>(null);
 
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
 
@@ -187,6 +190,19 @@ export default function AdminPage() {
     }
   }
 
+  async function handleArtworkBackfill(media_type: "movie" | "show") {
+    setArtBackfillLoading(true);
+    setArtBackfillStatus(`Starting artwork backfill for ${media_type}s…`);
+    try {
+      const res = await startArtworkBackfill(media_type);
+      setArtBackfillStatus(res.message);
+    } catch (err: unknown) {
+      setArtBackfillStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setArtBackfillLoading(false);
+    }
+  }
+
   async function handleVerifyArtwork(media_type: string) {
     setArtworkLoading(true);
     try {
@@ -217,15 +233,15 @@ export default function AdminPage() {
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin</h1>
 
       {/* Live Monitor */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Live Import Monitor</h2>
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Live Import Monitor</h2>
         {liveProgress ? (
           <div className="space-y-3">
             <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
               <span>{processed.toLocaleString()} / {liveProgress.total.toLocaleString()} records</span>
               <span>{pct}%{calcEta() ? ` — ETA ${calcEta()}` : ""}</span>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-nexus-border rounded-full h-3">
+            <div className="w-full bg-gray-200 dark:bg-[#2A2A2A] rounded-full h-3">
               <div
                 className="bg-nexus-accent h-3 rounded-full transition-all duration-500"
                 style={{ width: `${pct}%` }}
@@ -255,15 +271,15 @@ export default function AdminPage() {
       </section>
 
       {/* Start Import */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Start Bulk Import</h2>
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Start Bulk Import</h2>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Category</label>
             <select
               value={startForm.category}
               onChange={(e) => setStartForm({ ...startForm, category: e.target.value })}
-              className="rounded-lg border border-gray-300 dark:border-nexus-border bg-white dark:bg-nexus-bg text-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+              className="rounded-lg border border-gray-300 dark:border-[#2A2A2A] bg-white dark:bg-[#0A0A0A] text-gray-800 dark:text-white px-3 py-2 text-sm"
             >
               {IMPORT_CATEGORIES.map((c) => (
                 <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
@@ -275,7 +291,7 @@ export default function AdminPage() {
             <select
               value={startForm.media_type}
               onChange={(e) => setStartForm({ ...startForm, media_type: e.target.value })}
-              className="rounded-lg border border-gray-300 dark:border-nexus-border bg-white dark:bg-nexus-bg text-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+              className="rounded-lg border border-gray-300 dark:border-[#2A2A2A] bg-white dark:bg-[#0A0A0A] text-gray-800 dark:text-white px-3 py-2 text-sm"
             >
               <option value="movie">Movies</option>
               <option value="show">TV Shows</option>
@@ -289,12 +305,12 @@ export default function AdminPage() {
               max={5000}
               value={startForm.pages}
               onChange={(e) => setStartForm({ ...startForm, pages: parseInt(e.target.value) || 1 })}
-              className="w-28 rounded-lg border border-gray-300 dark:border-nexus-border bg-white dark:bg-nexus-bg text-gray-800 dark:text-gray-100 px-3 py-2 text-sm"
+              className="w-28 rounded-lg border border-gray-300 dark:border-[#2A2A2A] bg-white dark:bg-[#0A0A0A] text-gray-800 dark:text-white px-3 py-2 text-sm"
             />
           </div>
           <button
             onClick={handleStart}
-            className="px-5 py-2 rounded-lg bg-nexus-accent text-nexus-bg font-semibold text-sm hover:opacity-90 transition-opacity"
+            className="px-5 py-2 rounded-lg bg-nexus-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity"
           >
             ▶ Start
           </button>
@@ -315,8 +331,8 @@ export default function AdminPage() {
       </section>
 
       {/* Backfill Origin Data */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Backfill Origin Data</h2>
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Backfill Origin Data</h2>
         <p className="text-sm text-gray-500 dark:text-[#A1A1A1]">
           Fetch and store <code className="text-nexus-accent">origin_country</code> +{" "}
           <code className="text-nexus-accent">original_language</code> for existing records that are missing this data.
@@ -326,14 +342,14 @@ export default function AdminPage() {
           <button
             onClick={() => handleBackfill("movie")}
             disabled={backfillLoading}
-            className="px-4 py-2 rounded-lg bg-nexus-accent text-nexus-bg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-nexus-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {backfillLoading ? "Backfilling…" : "Backfill Movies"}
           </button>
           <button
             onClick={() => handleBackfill("show")}
             disabled={backfillLoading}
-            className="px-4 py-2 rounded-lg bg-nexus-accent text-nexus-bg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-nexus-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {backfillLoading ? "Backfilling…" : "Backfill TV Shows"}
           </button>
@@ -341,10 +357,36 @@ export default function AdminPage() {
         {backfillStatus && <p className="text-sm text-gray-600 dark:text-gray-400">{backfillStatus}</p>}
       </section>
 
+      {/* Backfill Artwork */}
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Backfill Artwork</h2>
+        <p className="text-sm text-gray-500 dark:text-[#A1A1A1]">
+          Fetch missing poster, backdrop, and fanart images for existing records.
+          Sends Telegram progress updates every 10 minutes.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleArtworkBackfill("movie")}
+            disabled={artBackfillLoading}
+            className="px-4 py-2 rounded-lg bg-nexus-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {artBackfillLoading ? "Backfilling…" : "Backfill Movie Art"}
+          </button>
+          <button
+            onClick={() => handleArtworkBackfill("show")}
+            disabled={artBackfillLoading}
+            className="px-4 py-2 rounded-lg bg-nexus-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {artBackfillLoading ? "Backfilling…" : "Backfill TV Art"}
+          </button>
+        </div>
+        {artBackfillStatus && <p className="text-sm text-gray-600 dark:text-gray-400">{artBackfillStatus}</p>}
+      </section>
+
       {/* Plex Integration — Compact Widget */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-3">
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Plex Integration</h2>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Plex Integration</h2>
           <Link
             href="/admin/plex"
             className="text-sm text-nexus-accent hover:underline flex items-center gap-1"
@@ -378,9 +420,9 @@ export default function AdminPage() {
       </section>
 
       {/* Session History */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Import History</h2>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Import History</h2>
           <button onClick={loadSessions} className="text-xs text-nexus-accent hover:underline">
             Refresh
           </button>
@@ -393,7 +435,7 @@ export default function AdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-nexus-border">
+                <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-[#2A2A2A]">
                   <th className="pb-2 pr-4">ID</th>
                   <th className="pb-2 pr-4">Type</th>
                   <th className="pb-2 pr-4">Status</th>
@@ -407,7 +449,7 @@ export default function AdminPage() {
                   <tr
                     key={s.id}
                     onClick={() => s.is_live && connectSSE(s.id)}
-                    className="border-b border-gray-100 dark:border-nexus-border/50 hover:bg-gray-50 dark:hover:bg-nexus-border/20 cursor-pointer"
+                    className="border-b border-gray-100 dark:border-[#2A2A2A]/50 hover:bg-gray-50 dark:hover:bg-[#2A2A2A]/20 cursor-pointer"
                   >
                     <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{s.id}</td>
                     <td className="py-2 pr-4 text-gray-700 dark:text-gray-300 capitalize">{s.media_type}</td>
@@ -438,8 +480,8 @@ export default function AdminPage() {
       </section>
 
       {/* Export Downloads */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Export Database</h2>
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Export Database</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {(["json", "csv", "xml"] as const).flatMap((fmt) =>
             (["movie", "show"] as const).map((mt) => (
@@ -447,7 +489,7 @@ export default function AdminPage() {
                 key={`${mt}-${fmt}`}
                 href={`${API_URL}/admin/export?format=${fmt}&media_type=${mt}`}
                 download
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-gray-200 dark:border-nexus-border hover:border-nexus-accent dark:hover:border-nexus-accent text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-gray-200 dark:border-[#2A2A2A] hover:border-nexus-accent dark:hover:border-nexus-accent text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
               >
                 <span className="uppercase text-nexus-accent font-bold">{fmt}</span>
                 <span className="capitalize">{mt === "show" ? "TV Shows" : "Movies"}</span>
@@ -458,15 +500,15 @@ export default function AdminPage() {
       </section>
 
       {/* Artwork Verify */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Artwork Verification</h2>
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Artwork Verification</h2>
         <div className="flex gap-3">
           {(["movie", "show"] as const).map((mt) => (
             <button
               key={mt}
               onClick={() => handleVerifyArtwork(mt)}
               disabled={artworkLoading}
-              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-nexus-border text-sm text-gray-700 dark:text-gray-300 hover:border-nexus-accent dark:hover:border-nexus-accent transition-colors disabled:opacity-50"
+              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-[#2A2A2A] text-sm text-gray-700 dark:text-gray-300 hover:border-nexus-accent dark:hover:border-nexus-accent transition-colors disabled:opacity-50"
             >
               {artworkLoading ? "Checking…" : `Check ${mt === "show" ? "TV" : "Movie"} Art`}
             </button>
@@ -494,16 +536,16 @@ export default function AdminPage() {
       </section>
 
       {/* Import Error Logs */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Import Error Logs</h2>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Import Error Logs</h2>
           <div className="flex gap-2 items-center">
             <input
               type="number"
               placeholder="Session ID"
               value={logSession ?? ""}
               onChange={(e) => setLogSession(e.target.value ? parseInt(e.target.value) : undefined)}
-              className="w-28 rounded-lg border border-gray-300 dark:border-nexus-border bg-white dark:bg-nexus-bg text-gray-800 dark:text-gray-100 px-2 py-1.5 text-xs"
+              className="w-28 rounded-lg border border-gray-300 dark:border-[#2A2A2A] bg-white dark:bg-[#0A0A0A] text-gray-800 dark:text-white px-2 py-1.5 text-xs"
             />
             <button
               onClick={() => loadLogs(logSession)}
@@ -526,7 +568,7 @@ export default function AdminPage() {
                     ? "bg-red-500/10 text-red-600 dark:text-red-400"
                     : l.level === "warning"
                     ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
-                    : "bg-gray-100 dark:bg-nexus-border/30 text-gray-600 dark:text-gray-400"
+                    : "bg-gray-100 dark:bg-[#2A2A2A]/30 text-gray-600 dark:text-gray-400"
                 }`}
               >
                 <span className="shrink-0 text-gray-400">{l.tmdb_id ?? "—"}</span>
@@ -541,9 +583,9 @@ export default function AdminPage() {
       </section>
 
       {/* Live Backend Logs */}
-      <section className="bg-white dark:bg-nexus-card rounded-xl border border-gray-200 dark:border-nexus-border p-6 space-y-4">
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Live Backend Logs</h2>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Live Backend Logs</h2>
           <div className="flex gap-2">
             <button
               onClick={connectLogStream}
@@ -553,7 +595,7 @@ export default function AdminPage() {
             </button>
             <button
               onClick={() => setLiveLogLines([])}
-              className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-nexus-border text-gray-600 dark:text-gray-300 text-xs hover:border-nexus-accent"
+              className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-[#2A2A2A] text-gray-600 dark:text-gray-300 text-xs hover:border-nexus-accent"
             >
               Clear
             </button>

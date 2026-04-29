@@ -44,7 +44,7 @@ def _read_version() -> str:
     try:
         return Path("/app/../VERSION").read_text().strip()
     except FileNotFoundError:
-        return "0.7.0"
+        return "0.8.0"
 
 
 @asynccontextmanager
