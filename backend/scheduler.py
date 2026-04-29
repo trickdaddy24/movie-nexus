@@ -39,8 +39,23 @@ def setup_scheduler() -> None:
         replace_existing=True,
     )
 
+    # 4am daily — Plex library sync (only if configured)
+    from config import get_settings
+    _settings = get_settings()
+    if _settings.plex_url and _settings.plex_token:
+        scheduler.add_job(
+            _plex_sync_job,
+            CronTrigger(hour=4, minute=0),
+            id="plex_sync",
+            name="Plex library sync",
+            replace_existing=True,
+        )
+
     scheduler.start()
-    logger.info("Scheduler started (trending@2am, ratings+backup@3am, summary@8am)")
+    _jobs = "trending@2am, ratings+backup@3am, summary@8am"
+    if _settings.plex_url and _settings.plex_token:
+        _jobs += ", plex@4am"
+    logger.info(f"Scheduler started ({_jobs})")
 
 
 async def _trending_sync_job() -> None:
@@ -60,3 +75,9 @@ async def _trending_summary_job() -> None:
     logger.info("Sending daily trending summary...")
     from routers.trending import send_daily_trending_summary
     await send_daily_trending_summary()
+
+
+async def _plex_sync_job() -> None:
+    logger.info("Running Plex library sync...")
+    from routers.plex import run_plex_sync_job
+    await run_plex_sync_job()

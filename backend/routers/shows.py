@@ -65,6 +65,11 @@ async def list_shows(
         poster_q = (
             select(Artwork.media_id, Artwork.url)
             .where(Artwork.media_type == "show", Artwork.type == "poster", Artwork.media_id.in_(show_ids))
+            .order_by(
+                Artwork.media_id,
+                case({"plex": 0, "tmdb": 1, "fanart": 2}, value=Artwork.source, else_=3),
+                case({"en": 0}, value=Artwork.language, else_=1),
+            )
             .distinct(Artwork.media_id)
         )
         poster_result = await db.execute(poster_q)
@@ -152,6 +157,10 @@ async def get_show(nexus_id: str, db: AsyncSession = Depends(get_db)):
     poster_result = await db.execute(
         select(Artwork.url)
         .where(Artwork.media_type == "show", Artwork.type == "poster", Artwork.media_id == show.id)
+        .order_by(
+            case({"plex": 0, "tmdb": 1, "fanart": 2}, value=Artwork.source, else_=3),
+            case({"en": 0}, value=Artwork.language, else_=1),
+        )
         .limit(1)
     )
     poster_url = poster_result.scalar_one_or_none()

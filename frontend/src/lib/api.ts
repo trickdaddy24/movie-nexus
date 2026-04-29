@@ -255,3 +255,48 @@ export async function startBackfill(
     { method: "POST" }
   );
 }
+
+// --- Plex Integration ---
+
+export interface PlexLibrary {
+  key: string;
+  type: string;
+  title: string;
+  count: number;
+}
+
+export interface PlexStatus {
+  configured: boolean;
+  url: string;
+  libraries: PlexLibrary[];
+  last_sync: string | null;
+}
+
+export async function getPlexStatus(): Promise<PlexStatus> {
+  return fetchAPI<PlexStatus>("/plex/status");
+}
+
+export async function startPlexSync(
+  library_key?: string
+): Promise<{ session_id: number; message: string }> {
+  const body: Record<string, string> = {};
+  if (library_key) body.library_key = library_key;
+  return fetchAPI("/plex/sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function startPlexRefresh(
+  media_type: "movie" | "show",
+  nexus_ids?: string[]
+): Promise<{ session_id: number; message: string }> {
+  const body: Record<string, unknown> = { media_type };
+  if (nexus_ids) body.nexus_ids = nexus_ids;
+  return fetchAPI("/plex/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}

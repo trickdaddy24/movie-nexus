@@ -12,10 +12,11 @@ from config import get_settings
 from database import engine, Base, async_session
 from api.tmdb import tmdb_client
 from api.fanart import fanart_client
+from api.plex import plex_client
 from nexus_id import ensure_counter_table
 from scheduler import scheduler, setup_scheduler
 from routers import movies, shows, imports, search, export, stats
-from routers import trending, admin, backfill
+from routers import trending, admin, backfill, plex
 
 # In-memory circular log buffer — last 1000 lines, streamed to admin UI
 _LOG_BUFFER: collections.deque = collections.deque(maxlen=1000)
@@ -43,7 +44,7 @@ def _read_version() -> str:
     try:
         return Path("/app/../VERSION").read_text().strip()
     except FileNotFoundError:
-        return "0.3.0"
+        return "0.6.0"
 
 
 @asynccontextmanager
@@ -59,6 +60,7 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown(wait=False)
     await tmdb_client.close()
     await fanart_client.close()
+    await plex_client.close()
     await engine.dispose()
     logger.info("MovieNexus shut down")
 
@@ -108,6 +110,7 @@ app.include_router(stats.router, prefix="/api")
 app.include_router(trending.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(backfill.router, prefix="/api")
+app.include_router(plex.router, prefix="/api")
 
 
 @app.get("/api/health")

@@ -62,6 +62,11 @@ async def list_movies(
         poster_q = (
             select(Artwork.media_id, Artwork.url)
             .where(Artwork.media_type == "movie", Artwork.type == "poster", Artwork.media_id.in_(movie_ids))
+            .order_by(
+                Artwork.media_id,
+                case({"plex": 0, "tmdb": 1, "fanart": 2}, value=Artwork.source, else_=3),
+                case({"en": 0}, value=Artwork.language, else_=1),
+            )
             .distinct(Artwork.media_id)
         )
         poster_result = await db.execute(poster_q)
@@ -109,6 +114,10 @@ async def get_movie(nexus_id: str, db: AsyncSession = Depends(get_db)):
     poster_result = await db.execute(
         select(Artwork.url)
         .where(Artwork.media_type == "movie", Artwork.type == "poster", Artwork.media_id == movie.id)
+        .order_by(
+            case({"plex": 0, "tmdb": 1, "fanart": 2}, value=Artwork.source, else_=3),
+            case({"en": 0}, value=Artwork.language, else_=1),
+        )
         .limit(1)
     )
     poster_url = poster_result.scalar_one_or_none()
