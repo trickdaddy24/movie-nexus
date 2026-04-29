@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { verify } from "@node-rs/bcrypt";
 import { authConfig } from "./auth.config";
 
 const prisma = new PrismaClient();
@@ -33,7 +33,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Regular DB user
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !user.password) return null;
-        const valid = await bcrypt.compare(password, user.password);
+        const valid = await verify(password, user.password);
         if (!valid) return null;
         if (user.status !== "approved") return null;
 
