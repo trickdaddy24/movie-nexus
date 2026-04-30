@@ -1,5 +1,6 @@
 import { getMovies } from "@/lib/api";
 import MediaCard from "@/components/MediaCard";
+import Pagination from "@/components/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -95,32 +96,11 @@ export default async function MoviesPage({
         ))}
       </div>
 
-      {data.pages > 1 && (() => {
-        const qp = `sort=${sort}&category=${category}${genre ? `&genre=${encodeURIComponent(genre)}` : ""}`;
-        return (
-          <div className="mt-8 flex justify-center gap-2">
-            {page > 1 && (
-              <a
-                href={`/movies?page=${page - 1}&${qp}`}
-                className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#39FFEE]"
-              >
-                Previous
-              </a>
-            )}
-            <span className="rounded-lg bg-nexus-accent px-4 py-2 text-sm font-medium text-white">
-              {page} / {data.pages}
-            </span>
-            {page < data.pages && (
-              <a
-                href={`/movies?page=${page + 1}&${qp}`}
-                className="rounded-lg border border-nexus-border bg-nexus-card px-4 py-2 text-sm hover:border-nexus-accent transition dark:bg-[#1C1C1E] dark:border-[#2A2A2A] dark:text-[#A1A1A1] dark:hover:border-[#39FFEE]"
-              >
-                Next
-              </a>
-            )}
-          </div>
-        );
-      })()}
+      <Pagination
+        page={page}
+        totalPages={data.pages}
+        baseHref={`/movies?sort=${sort}&category=${category}${genre ? `&genre=${encodeURIComponent(genre)}` : ""}`}
+      />
     </div>
   );
 }
