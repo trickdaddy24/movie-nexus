@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://movienexus-backend:8000/api";
 const ADMIN_KEY = process.env.ADMIN_API_KEY || "";
@@ -12,15 +11,6 @@ function getApiKey(path: string): string {
 }
 
 async function proxyRequest(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
-  // Validate auth: JWT session OR bypass cookie (no bcryptjs/Prisma imports)
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
-  const bypassToken = process.env.ADMIN_BYPASS_TOKEN || "";
-  const bypassCookie = req.cookies.get("nexus_bypass")?.value || "";
-  const hasBypass = bypassToken && bypassCookie === bypassToken;
-  if (!token && !hasBypass) {
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-  }
-
   const { path } = await params;
   const apiPath = "/" + path.join("/");
   const apiKey = getApiKey(apiPath);
