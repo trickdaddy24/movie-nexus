@@ -157,7 +157,7 @@ async def start_plex_refresh(body: PlexRefreshRequest, db: AsyncSession = Depend
 
 # ── SSE Progress ──
 
-@router.get("/progress/{session_id}")
+@router.get("/progress/{session_id}", dependencies=[])
 async def plex_progress(session_id: int):
     async def stream():
         last_activity_len = 0

@@ -330,7 +330,7 @@ async def get_import_logs(
     ]
 
 
-@router.get("/logs/stream")
+@router.get("/logs/stream", dependencies=[])
 async def stream_logs():
     """SSE stream of the in-memory backend log buffer."""
     from main import log_buffer

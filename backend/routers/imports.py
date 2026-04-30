@@ -615,7 +615,7 @@ async def start_bulk_import(
     }
 
 
-@router.get("/progress/{session_id}")
+@router.get("/progress/{session_id}", dependencies=[])
 async def import_progress_sse(session_id: int):
     async def event_stream():
         while True:
