@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
         secure: true,
         sameSite: "strict",
         maxAge: BYPASS_MAX_AGE,
-        path: "/admin",
+        path: "/",
       });
       return response;
     }
