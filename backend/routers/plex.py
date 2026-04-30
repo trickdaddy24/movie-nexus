@@ -24,6 +24,7 @@ from routers.imports import _import_single_movie, _import_single_show
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/plex", tags=["Plex"], dependencies=[Depends(require_admin_key)])
+sse_router = APIRouter(prefix="/plex", tags=["Plex SSE"])
 
 _active_jobs: dict[int, dict] = {}
 
@@ -157,7 +158,7 @@ async def start_plex_refresh(body: PlexRefreshRequest, db: AsyncSession = Depend
 
 # ── SSE Progress ──
 
-@router.get("/progress/{session_id}", dependencies=[])
+@sse_router.get("/progress/{session_id}")
 async def plex_progress(session_id: int):
     async def stream():
         last_activity_len = 0

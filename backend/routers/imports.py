@@ -21,6 +21,7 @@ from api.fanart import fanart_client
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/import", tags=["Import"], dependencies=[Depends(require_admin_key)])
+sse_router = APIRouter(prefix="/import", tags=["Import SSE"])
 
 _active_jobs: dict[int, dict] = {}
 
@@ -615,7 +616,7 @@ async def start_bulk_import(
     }
 
 
-@router.get("/progress/{session_id}", dependencies=[])
+@sse_router.get("/progress/{session_id}")
 async def import_progress_sse(session_id: int):
     async def event_stream():
         while True:

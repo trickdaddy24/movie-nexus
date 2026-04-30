@@ -114,8 +114,11 @@ app.include_router(export.router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
 app.include_router(trending.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(admin.sse_router, prefix="/api")
 app.include_router(backfill.router, prefix="/api")
 app.include_router(plex.router, prefix="/api")
+app.include_router(plex.sse_router, prefix="/api")
+app.include_router(imports.sse_router, prefix="/api")
 
 
 @app.get("/api/health", dependencies=[Depends(require_read_key)])

@@ -26,6 +26,8 @@ from api.telegram import send_telegram
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["Admin"], dependencies=[Depends(require_admin_key)])
+# SSE endpoints need a separate router — EventSource can't send API key headers
+sse_router = APIRouter(prefix="/admin", tags=["Admin SSE"])
 
 
 # ---------------------------------------------------------------------------
@@ -330,7 +332,7 @@ async def get_import_logs(
     ]
 
 
-@router.get("/logs/stream", dependencies=[])
+@sse_router.get("/logs/stream")
 async def stream_logs():
     """SSE stream of the in-memory backend log buffer."""
     from main import log_buffer
