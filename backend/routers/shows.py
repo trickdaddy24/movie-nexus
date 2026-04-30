@@ -42,18 +42,21 @@ async def list_shows(
     # Category filter
     query = apply_category_filter(query, TVShow, ShowGenre, ShowGenre.show_id, category)
 
-    # Ordering: USA-first when no explicit sort override (default sort) and no category active
-    if sort == "added_at" and (category is None or category == "all"):
-        usa_first = case((TVShow.origin_country.like("%US%"), 0), else_=1)
-        query = query.order_by(usa_first, TVShow.popularity.desc())
-    else:
-        sort_col = getattr(TVShow, sort)
-        query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
-
     if needs_distinct:
         query = query.distinct()
 
     count_q = select(func.count()).select_from(query.subquery())
+
+    # Ordering applied after distinct to avoid PostgreSQL "ORDER BY must be in SELECT list" error
+    if sort == "added_at" and (category is None or category == "all"):
+        usa_first = case((TVShow.origin_country.like("%US%"), 0), else_=1)
+        if needs_distinct:
+            query = select(TVShow).where(TVShow.id.in_(query.with_only_columns(TVShow.id)))
+            query = query.options(selectinload(TVShow.show_genres))
+        query = query.order_by(usa_first, TVShow.popularity.desc())
+    else:
+        sort_col = getattr(TVShow, sort)
+        query = query.order_by(sort_col.desc() if order == "desc" else sort_col.asc())
     total = (await db.execute(count_q)).scalar() or 0
 
     query = query.offset((page - 1) * per_page).limit(per_page)
