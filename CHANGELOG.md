@@ -5,6 +5,19 @@ All notable changes to MovieNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-04-29
+
+### Added
+- Chunked full Plex sync — imports all existing Plex content in ~2,000-item batches with adaptive delays
+- Self-scheduling async worker: process chunk → adaptive sleep (10-30 min based on skip ratio) → repeat
+- Redis state snapshots for crash recovery — resumes from last completed batch on server restart
+- Blackout window (3:30-4:30am UTC) avoids conflict with nightly scheduled sync
+- Pause/resume/cancel controls for full sync (`POST /plex/full-sync/pause`, `/resume`, `DELETE /plex/full-sync`)
+- Full sync status endpoint (`GET /plex/full-sync/status`) with batch progress, counters, and ETA
+- Telegram notifications per batch (imported/skipped/failed counts) and final summary with duration
+- Full Sync UI card on Plex Dashboard with progress bar, counters, and pause/resume/cancel buttons
+- Async Redis client module (`backend/redis_client.py`) with connection pooling and graceful shutdown
+
 ## [0.9.0] - 2026-04-30
 
 ### Added

@@ -7,10 +7,16 @@ import {
   startPlexSync,
   startPlexRefresh,
   getPlexHistory,
+  getFullSyncStatus,
+  startFullSync,
+  pauseFullSync,
+  resumeFullSync,
+  cancelFullSync,
   PlexStatus,
   PlexLibraryProgress,
   PlexActivityItem,
   PlexSyncHistoryEntry,
+  FullSyncStatus,
 } from "@/lib/api";
 
 const API_URL =
@@ -37,6 +43,8 @@ export default function PlexDashboard() {
   const [activityFeed, setActivityFeed] = useState<PlexActivityItem[]>([]);
   const [syncHistory, setSyncHistory] = useState<PlexSyncHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [fullSync, setFullSync] = useState<FullSyncStatus | null>(null);
+  const [fullSyncPolling, setFullSyncPolling] = useState(false);
 
   const sseRef = useRef<EventSource | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
@@ -46,9 +54,27 @@ export default function PlexDashboard() {
   useEffect(() => {
     loadPlexStatus();
     loadHistory();
+    loadFullSyncStatus();
     return () => { sseRef.current?.close(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Poll full sync status when active
+  useEffect(() => {
+    if (!fullSyncPolling) return;
+    const iv = setInterval(async () => {
+      try {
+        const s = await getFullSyncStatus();
+        setFullSync(s);
+        if (s.status === "completed" || s.status === "failed" || s.status === "idle" || s.status === "cancelled") {
+          setFullSyncPolling(false);
+          loadHistory();
+        }
+      } catch { /* ignore */ }
+    }, 10_000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullSyncPolling]);
 
   // Auto-scroll activity feed
   useEffect(() => {
@@ -63,6 +89,46 @@ export default function PlexDashboard() {
 
   async function loadHistory() {
     try { setSyncHistory(await getPlexHistory(20)); } catch { /* ignore */ }
+  }
+
+  async function loadFullSyncStatus() {
+    try {
+      const s = await getFullSyncStatus();
+      setFullSync(s);
+      if (s.status === "running" || s.status === "paused") {
+        setFullSyncPolling(true);
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function handleStartFullSync() {
+    try {
+      await startFullSync();
+      setFullSyncPolling(true);
+      // Small delay then fetch initial status
+      setTimeout(loadFullSyncStatus, 1500);
+    } catch (err: unknown) { console.error(err); }
+  }
+
+  async function handlePauseFullSync() {
+    try { await pauseFullSync(); loadFullSyncStatus(); } catch (err: unknown) { console.error(err); }
+  }
+
+  async function handleResumeFullSync() {
+    try {
+      await resumeFullSync();
+      setFullSyncPolling(true);
+      loadFullSyncStatus();
+    } catch (err: unknown) { console.error(err); }
+  }
+
+  async function handleCancelFullSync() {
+    if (!confirm("Cancel the full sync? Progress will be lost.")) return;
+    try {
+      await cancelFullSync();
+      setFullSync({ status: "idle" });
+      setFullSyncPolling(false);
+    } catch (err: unknown) { console.error(err); }
   }
 
   function connectSSE(sessionId: number) {
@@ -321,6 +387,123 @@ export default function PlexDashboard() {
             Refresh TV Art
           </button>
         </div>
+      )}
+
+      {/* Full Sync */}
+      {plexStatus?.configured && (
+        <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Full Library Sync</h2>
+            {fullSync && fullSync.status !== "idle" && (
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                fullSync.status === "running" ? "bg-blue-500/20 text-blue-400" :
+                fullSync.status === "paused" ? "bg-yellow-500/20 text-yellow-400" :
+                fullSync.status === "completed" ? "bg-green-500/20 text-green-400" :
+                fullSync.status === "failed" ? "bg-red-500/20 text-red-400" :
+                "bg-gray-500/20 text-gray-400"
+              }`}>
+                {fullSync.status}
+              </span>
+            )}
+          </div>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Import all existing Plex content into MovieNexus. Processes ~2,000 items per batch with adaptive delays to avoid overloading TMDb.
+          </p>
+
+          {(!fullSync || fullSync.status === "idle" || fullSync.status === "completed" || fullSync.status === "cancelled" || fullSync.status === "failed") ? (
+            <button
+              onClick={handleStartFullSync}
+              disabled={isSyncing || isLoading}
+              className="px-5 py-2.5 rounded-lg bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
+            >
+              Start Full Sync
+            </button>
+          ) : (
+            <>
+              {/* Progress bar */}
+              {fullSync.total && fullSync.total > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                    <span>
+                      Batch {fullSync.batch || 0}/{fullSync.total_batches || 0}
+                      {" — "}
+                      {(fullSync.cursor || 0).toLocaleString()} / {fullSync.total.toLocaleString()} items
+                    </span>
+                    <span>{Math.round(((fullSync.cursor || 0) / fullSync.total) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-[#2A2A2A] rounded-full h-3">
+                    <div
+                      className="bg-purple-500 h-3 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.round(((fullSync.cursor || 0) / fullSync.total) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Counters */}
+              <div className="grid grid-cols-3 gap-4 text-sm text-center">
+                <div>
+                  <div className="font-bold text-green-500">{(fullSync.imported || 0).toLocaleString()}</div>
+                  <div className="text-gray-500 dark:text-gray-400">Imported</div>
+                </div>
+                <div>
+                  <div className="font-bold text-yellow-400">{(fullSync.skipped || 0).toLocaleString()}</div>
+                  <div className="text-gray-500 dark:text-gray-400">Skipped</div>
+                </div>
+                <div>
+                  <div className="font-bold text-red-400">{(fullSync.failed || 0).toLocaleString()}</div>
+                  <div className="text-gray-500 dark:text-gray-400">Failed</div>
+                </div>
+              </div>
+
+              {/* Current activity */}
+              {fullSync.current_title && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {fullSync.current_title}
+                </p>
+              )}
+
+              {/* Next batch info */}
+              {fullSync.next_batch_at && fullSync.status === "running" && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Next batch at {new Date(fullSync.next_batch_at).toLocaleTimeString()}
+                </p>
+              )}
+
+              {/* Controls */}
+              <div className="flex gap-3">
+                {fullSync.status === "running" && (
+                  <button
+                    onClick={handlePauseFullSync}
+                    className="px-4 py-2 rounded-lg border border-yellow-400/50 text-yellow-400 text-sm hover:bg-yellow-400/10 transition-colors"
+                  >
+                    Pause
+                  </button>
+                )}
+                {fullSync.status === "paused" && (
+                  <button
+                    onClick={handleResumeFullSync}
+                    className="px-4 py-2 rounded-lg border border-green-400/50 text-green-400 text-sm hover:bg-green-400/10 transition-colors"
+                  >
+                    Resume
+                  </button>
+                )}
+                <button
+                  onClick={handleCancelFullSync}
+                  className="px-4 py-2 rounded-lg border border-red-400/50 text-red-400 text-sm hover:bg-red-400/10 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Show error if failed */}
+          {fullSync?.status === "failed" && fullSync.error && (
+            <p className="text-sm text-red-400">{fullSync.error}</p>
+          )}
+        </section>
       )}
 
       {/* Overall Progress */}

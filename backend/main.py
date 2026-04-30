@@ -15,6 +15,7 @@ from api.fanart import fanart_client
 from api.plex import plex_client
 from dependencies import require_read_key
 from nexus_id import ensure_counter_table
+from redis_client import close_redis
 from scheduler import scheduler, setup_scheduler
 from routers import movies, shows, imports, search, export, stats
 from routers import trending, admin, backfill, plex
@@ -45,7 +46,7 @@ def _read_version() -> str:
     try:
         return Path("/app/../VERSION").read_text().strip()
     except FileNotFoundError:
-        return "0.9.0"
+        return "0.10.0"
 
 
 @asynccontextmanager
@@ -57,11 +58,14 @@ async def lifespan(app: FastAPI):
         await ensure_counter_table(db)
     setup_scheduler()
     logger.info("Database tables ready")
+    # Resume interrupted full sync from Redis (crash recovery)
+    await plex.resume_full_sync_from_redis()
     yield
     scheduler.shutdown(wait=False)
     await tmdb_client.close()
     await fanart_client.close()
     await plex_client.close()
+    await close_redis()
     await engine.dispose()
     logger.info("MovieNexus shut down")
 

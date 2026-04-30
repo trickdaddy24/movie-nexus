@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import math
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
@@ -17,6 +18,7 @@ from api.plex import plex_client
 from api.tmdb import tmdb_client
 from api.telegram import send_telegram
 from dependencies import require_admin_key
+from redis_client import get_redis
 from routers.imports import _import_single_movie, _import_single_show
 
 logger = logging.getLogger(__name__)
@@ -755,3 +757,361 @@ async def run_plex_sync_job():
 
     progress["status"] = "completed"
     logger.info(f"Plex sync done: {progress['imported']} imported, {progress['skipped']} existing, {progress['failed']} failed")
+
+
+# ── Full Sync — Chunked Async Worker ──
+
+FULL_SYNC_CHUNK_SIZE = 2000
+FULL_SYNC_DELAY_DEFAULT = 1200   # 20 minutes
+FULL_SYNC_DELAY_LIGHT = 600     # 10 minutes (>80% skipped)
+FULL_SYNC_DELAY_HEAVY = 1800    # 30 minutes (>50% imported)
+FULL_SYNC_BLACKOUT_START = 3    # 3:30 AM
+FULL_SYNC_BLACKOUT_END = 4      # 4:30 AM
+
+_full_sync_state: dict | None = None
+_full_sync_task: asyncio.Task | None = None
+
+REDIS_KEY_STATE = "movienexus:fullsync:state"
+
+
+def _get_full_sync_status() -> dict | None:
+    """Return current full sync state or None if not running."""
+    return _full_sync_state
+
+
+class FullSyncRequest(BaseModel):
+    chunk_size: int = FULL_SYNC_CHUNK_SIZE
+    delay_seconds: int = FULL_SYNC_DELAY_DEFAULT
+
+
+@router.post("/full-sync")
+async def start_full_sync(body: FullSyncRequest = FullSyncRequest()):
+    global _full_sync_task, _full_sync_state
+
+    if not plex_client.configured:
+        return {"error": "Plex not configured. Set PLEX_URL and PLEX_TOKEN in .env"}
+
+    if _full_sync_state and _full_sync_state.get("status") in ("running", "paused"):
+        return {"error": "Full sync already in progress", "status": _full_sync_state}
+
+    _full_sync_task = asyncio.create_task(
+        _run_full_sync_worker(body.chunk_size, body.delay_seconds)
+    )
+    return {"message": "Full sync started"}
+
+
+@router.post("/full-sync/pause")
+async def pause_full_sync():
+    if not _full_sync_state or _full_sync_state.get("status") != "running":
+        return {"error": "No active full sync to pause"}
+    _full_sync_state["status"] = "paused"
+    return {"message": "Full sync paused — will stop after current item"}
+
+
+@router.post("/full-sync/resume")
+async def resume_full_sync():
+    if not _full_sync_state or _full_sync_state.get("status") != "paused":
+        return {"error": "No paused full sync to resume"}
+    _full_sync_state["status"] = "running"
+    return {"message": "Full sync resumed"}
+
+
+@router.delete("/full-sync")
+async def cancel_full_sync():
+    global _full_sync_task, _full_sync_state
+
+    if _full_sync_task and not _full_sync_task.done():
+        _full_sync_task.cancel()
+
+    # Clear Redis state
+    try:
+        r = await get_redis()
+        await r.delete(REDIS_KEY_STATE)
+    except Exception:
+        pass
+
+    _full_sync_state = None
+    _full_sync_task = None
+    return {"message": "Full sync cancelled"}
+
+
+@router.get("/full-sync/status")
+async def full_sync_status():
+    if not _full_sync_state:
+        # Check Redis for persisted state (crash recovery info)
+        try:
+            r = await get_redis()
+            raw = await r.get(REDIS_KEY_STATE)
+            if raw:
+                saved = json.loads(raw)
+                saved["source"] = "redis_snapshot"
+                return saved
+        except Exception:
+            pass
+        return {"status": "idle"}
+    return _full_sync_state
+
+
+async def _snapshot_state_to_redis(state: dict) -> None:
+    """Save full sync state to Redis for crash recovery."""
+    try:
+        r = await get_redis()
+        await r.set(REDIS_KEY_STATE, json.dumps(state), ex=86400)  # 24h TTL
+    except Exception as e:
+        logger.warning(f"Failed to snapshot full sync state to Redis: {e}")
+
+
+async def _run_full_sync_worker(chunk_size: int, base_delay: int) -> None:
+    """Long-lived async worker: process chunk → sleep → repeat."""
+    global _full_sync_state
+
+    sync_start = datetime.now(timezone.utc)
+
+    # Phase 1: Scan all Plex libraries and collect items
+    logger.info("Full sync: scanning Plex libraries...")
+    try:
+        libraries = await plex_client.get_libraries()
+        libraries = [lib for lib in libraries if lib["type"] in ("movie", "show")]
+    except Exception as e:
+        logger.error(f"Full sync: failed to get libraries: {e}")
+        _full_sync_state = {"status": "failed", "error": str(e)}
+        return
+
+    all_items: list[dict] = []
+    for lib in libraries:
+        try:
+            items = await plex_client.get_all_items(lib["key"])
+            for item in items:
+                all_items.append({
+                    "title": item.get("title", "Unknown"),
+                    "type": lib["type"],
+                    "library": lib["title"],
+                    "ratingKey": str(item.get("ratingKey", "")),
+                    "guids": item.get("Guid", []),
+                    "plex_data": item,
+                })
+        except Exception as e:
+            logger.error(f"Full sync: failed to scan library '{lib['title']}': {e}")
+
+    total = len(all_items)
+    total_batches = math.ceil(total / chunk_size)
+
+    logger.info(f"Full sync: {total:,} items across {len(libraries)} libraries, {total_batches} batches")
+
+    # Initialize state
+    _full_sync_state = {
+        "status": "running",
+        "total": total,
+        "cursor": 0,
+        "batch": 0,
+        "total_batches": total_batches,
+        "chunk_size": chunk_size,
+        "imported": 0,
+        "skipped": 0,
+        "failed": 0,
+        "current_title": "",
+        "started_at": sync_start.isoformat(),
+        "last_batch_at": None,
+        "next_batch_at": None,
+        "libraries": [lib["title"] for lib in libraries],
+    }
+
+    # Telegram: sync started
+    lib_names = ", ".join(lib["title"] for lib in libraries)
+    est_hours = round(total_batches * (base_delay + 300) / 3600, 1)
+    await send_telegram(
+        f"<b>Full Plex Sync Started</b>\n"
+        f"Items: {total:,}\n"
+        f"Batches: {total_batches} (chunk size: {chunk_size:,})\n"
+        f"Libraries: {lib_names}\n"
+        f"Estimated: ~{est_hours}h"
+    )
+
+    await _snapshot_state_to_redis(_full_sync_state)
+
+    # Phase 2: Process in chunks
+    cursor = 0
+    while cursor < total:
+        # Check for cancellation
+        if _full_sync_state is None or _full_sync_state.get("status") == "cancelled":
+            break
+
+        # Pause check — spin-wait with short sleeps
+        while _full_sync_state and _full_sync_state.get("status") == "paused":
+            await asyncio.sleep(5)
+
+        if _full_sync_state is None:
+            break
+
+        # Blackout window check (3:30am - 4:30am UTC)
+        now = datetime.now(timezone.utc)
+        if now.hour == FULL_SYNC_BLACKOUT_START and now.minute >= 30:
+            logger.info("Full sync: entering blackout window, sleeping until 4:30am")
+            _full_sync_state["current_title"] = "Paused for nightly sync window"
+            await _snapshot_state_to_redis(_full_sync_state)
+            # Sleep until 4:30am
+            wake_at = now.replace(hour=FULL_SYNC_BLACKOUT_END, minute=30, second=0)
+            sleep_secs = (wake_at - now).total_seconds()
+            if sleep_secs > 0:
+                await asyncio.sleep(sleep_secs)
+            continue
+        if now.hour == FULL_SYNC_BLACKOUT_END and now.minute < 30:
+            sleep_secs = (30 - now.minute) * 60
+            await asyncio.sleep(sleep_secs)
+            continue
+
+        # Process this chunk
+        batch_num = _full_sync_state["batch"] + 1
+        chunk = all_items[cursor:cursor + chunk_size]
+        batch_imported = 0
+        batch_skipped = 0
+        batch_failed = 0
+
+        logger.info(f"Full sync: starting batch {batch_num}/{total_batches} ({len(chunk)} items)")
+        _full_sync_state["batch"] = batch_num
+        _full_sync_state["current_title"] = f"Batch {batch_num}/{total_batches}"
+
+        async with async_session() as db:
+            for item in chunk:
+                if _full_sync_state is None or _full_sync_state.get("status") == "cancelled":
+                    break
+                # Pause check within chunk
+                while _full_sync_state and _full_sync_state.get("status") == "paused":
+                    await asyncio.sleep(5)
+                if _full_sync_state is None:
+                    break
+
+                title = item["title"]
+                _full_sync_state["current_title"] = title
+
+                try:
+                    guids = item["guids"]
+                    before = (_full_sync_state["imported"], _full_sync_state["skipped"], _full_sync_state["failed"])
+
+                    progress_ref = _full_sync_state  # reuse state dict as progress tracker
+                    if item["type"] == "movie":
+                        await _sync_single_movie(db, item["plex_data"], guids, progress_ref)
+                    else:
+                        await _sync_single_show(db, item["plex_data"], guids, progress_ref)
+
+                    after = (_full_sync_state["imported"], _full_sync_state["skipped"], _full_sync_state["failed"])
+                    if after[0] > before[0]:
+                        batch_imported += 1
+                    elif after[2] > before[2]:
+                        batch_failed += 1
+                    else:
+                        batch_skipped += 1
+
+                except Exception as e:
+                    _full_sync_state["failed"] += 1
+                    batch_failed += 1
+                    logger.error(f"Full sync error for '{title}': {e}")
+
+                _full_sync_state["cursor"] = cursor + chunk.index(item) + 1
+                await asyncio.sleep(0.15)
+
+        cursor += len(chunk)
+        _full_sync_state["cursor"] = cursor
+        _full_sync_state["last_batch_at"] = datetime.now(timezone.utc).isoformat()
+
+        # Adaptive delay
+        if len(chunk) > 0:
+            skip_ratio = batch_skipped / len(chunk)
+            import_ratio = batch_imported / len(chunk)
+            if skip_ratio > 0.8:
+                delay = FULL_SYNC_DELAY_LIGHT
+            elif import_ratio > 0.5:
+                delay = FULL_SYNC_DELAY_HEAVY
+            else:
+                delay = base_delay
+        else:
+            delay = base_delay
+
+        # Telegram: batch complete
+        remaining_batches = total_batches - batch_num
+        await send_telegram(
+            f"<b>Full Sync Batch {batch_num}/{total_batches}</b>\n"
+            f"Imported: {batch_imported:,}\n"
+            f"Skipped: {batch_skipped:,}\n"
+            f"Failed: {batch_failed:,}\n"
+            f"Total progress: {cursor:,}/{total:,}\n"
+            f"Next batch in {delay // 60} min"
+        )
+
+        await _snapshot_state_to_redis(_full_sync_state)
+
+        # Sleep before next chunk (unless this was the last batch)
+        if cursor < total:
+            next_batch_time = datetime.now(timezone.utc).timestamp() + delay
+            _full_sync_state["next_batch_at"] = datetime.fromtimestamp(
+                next_batch_time, tz=timezone.utc
+            ).isoformat()
+            _full_sync_state["current_title"] = f"Waiting {delay // 60}m before batch {batch_num + 1}"
+            logger.info(f"Full sync: sleeping {delay}s before next batch")
+            await asyncio.sleep(delay)
+
+    # Final summary
+    elapsed = int((datetime.now(timezone.utc) - sync_start).total_seconds())
+
+    if _full_sync_state:
+        _full_sync_state["status"] = "completed"
+        _full_sync_state["current_title"] = "Complete"
+        _full_sync_state["finished_at"] = datetime.now(timezone.utc).isoformat()
+
+        await send_telegram(
+            f"<b>Full Plex Sync Complete</b>\n"
+            f"Imported: {_full_sync_state['imported']:,}\n"
+            f"Skipped: {_full_sync_state['skipped']:,}\n"
+            f"Failed: {_full_sync_state['failed']:,}\n"
+            f"Total: {total:,}\n"
+            f"Duration: {_fmt_duration(elapsed)}\n"
+            f"Batches: {_full_sync_state['batch']}"
+        )
+
+        await _snapshot_state_to_redis(_full_sync_state)
+
+    # Clear Redis state after completion
+    try:
+        r = await get_redis()
+        await r.delete(REDIS_KEY_STATE)
+    except Exception:
+        pass
+
+    logger.info(f"Full sync complete: {_full_sync_state['imported']} imported, {_full_sync_state['skipped']} skipped, {_full_sync_state['failed']} failed in {_fmt_duration(elapsed)}")
+
+
+async def resume_full_sync_from_redis() -> None:
+    """Called on startup to resume an interrupted full sync."""
+    global _full_sync_state, _full_sync_task
+
+    try:
+        r = await get_redis()
+        raw = await r.get(REDIS_KEY_STATE)
+        if not raw:
+            return
+        saved = json.loads(raw)
+        if saved.get("status") not in ("running", "paused"):
+            await r.delete(REDIS_KEY_STATE)
+            return
+
+        logger.info(f"Full sync: found interrupted sync at batch {saved.get('batch')}/{saved.get('total_batches')}, cursor {saved.get('cursor')}/{saved.get('total')}")
+
+        # Send Telegram notification about resume
+        await send_telegram(
+            f"<b>Full Plex Sync Resuming</b>\n"
+            f"Server restarted — resuming from batch {saved.get('batch')}\n"
+            f"Progress: {saved.get('cursor', 0):,}/{saved.get('total', 0):,}"
+        )
+
+        # Clear old state and start fresh from saved cursor position
+        await r.delete(REDIS_KEY_STATE)
+
+        # Re-trigger a full sync — it will re-scan Plex but skip already-imported items
+        _full_sync_task = asyncio.create_task(
+            _run_full_sync_worker(
+                saved.get("chunk_size", FULL_SYNC_CHUNK_SIZE),
+                FULL_SYNC_DELAY_DEFAULT,
+            )
+        )
+    except Exception as e:
+        logger.warning(f"Full sync crash recovery check failed: {e}")

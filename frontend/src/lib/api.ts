@@ -372,3 +372,53 @@ export interface PlexSyncHistoryEntry {
 export async function getPlexHistory(limit = 20): Promise<PlexSyncHistoryEntry[]> {
   return fetchAPI<PlexSyncHistoryEntry[]>(`/plex/history?limit=${limit}`);
 }
+
+// --- Plex Full Sync ---
+
+export interface FullSyncStatus {
+  status: "idle" | "running" | "paused" | "completed" | "failed" | "cancelled";
+  total?: number;
+  cursor?: number;
+  batch?: number;
+  total_batches?: number;
+  imported?: number;
+  skipped?: number;
+  failed?: number;
+  current_title?: string;
+  started_at?: string;
+  finished_at?: string;
+  next_batch_at?: string;
+  last_batch_at?: string;
+  error?: string;
+  source?: string;
+}
+
+export async function getFullSyncStatus(): Promise<FullSyncStatus> {
+  return fetchAPI<FullSyncStatus>("/plex/full-sync/status");
+}
+
+export async function startFullSync(
+  chunkSize?: number,
+  delaySeconds?: number
+): Promise<{ message: string }> {
+  const body: Record<string, number> = {};
+  if (chunkSize) body.chunk_size = chunkSize;
+  if (delaySeconds) body.delay_seconds = delaySeconds;
+  return fetchAPI("/plex/full-sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function pauseFullSync(): Promise<{ message: string }> {
+  return fetchAPI("/plex/full-sync/pause", { method: "POST" });
+}
+
+export async function resumeFullSync(): Promise<{ message: string }> {
+  return fetchAPI("/plex/full-sync/resume", { method: "POST" });
+}
+
+export async function cancelFullSync(): Promise<{ message: string }> {
+  return fetchAPI("/plex/full-sync", { method: "DELETE" });
+}
