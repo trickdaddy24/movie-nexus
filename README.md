@@ -8,9 +8,9 @@ A full-featured movie and TV show database platform. Import from TMDb, TVDb, Ple
 
 ## Screenshots
 
-![TV Shows Browse](docs/screenshots/tv-shows-browse.png)
+![Homepage](docs/screenshots/homepage.png)
 
-![Homepage Dashboard](docs/screenshots/homepage-dashboard.png)
+![TV Shows Browse](docs/screenshots/tv-shows-browse.png)
 
 ## Features
 
