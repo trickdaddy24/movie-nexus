@@ -5,6 +5,18 @@ All notable changes to MovieNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-04-30
+
+### Added
+- Two-tier API key protection: `READ_API_KEY` for read endpoints, `ADMIN_API_KEY` for admin/write endpoints
+- Emergency admin bypass token (`ADMIN_BYPASS_TOKEN`) — visit `/admin?bypass=TOKEN` to set 24-hour access cookie
+- Server-side proxy route for client-side admin API calls (auth-gated)
+- API key headers on all frontend-to-backend fetches
+
+### Changed
+- Swagger UI (`/api/docs`) disabled when `ADMIN_API_KEY` is configured
+- All API endpoints now require appropriate API key when keys are configured
+
 ## [0.8.0] - 2026-04-29
 
 ### Added

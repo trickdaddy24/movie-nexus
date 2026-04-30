@@ -1,8 +1,29 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+const READ_KEY = typeof window === "undefined" ? (process.env.READ_API_KEY || "") : "";
+const ADMIN_KEY = typeof window === "undefined" ? (process.env.ADMIN_API_KEY || "") : "";
+
+const ADMIN_PREFIXES = ["/admin", "/import", "/plex", "/export", "/backfill"];
 
 async function fetchAPI<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const isAdminPath = ADMIN_PREFIXES.some((p) => path.startsWith(p));
+  const apiKey = isAdminPath ? ADMIN_KEY : READ_KEY;
+
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string>),
+  };
+  if (apiKey) {
+    headers["X-Api-Key"] = apiKey;
+  }
+
+  // Client-side admin calls go through the auth-gated proxy
+  let url = `${API_URL}${path}`;
+  if (typeof window !== "undefined" && isAdminPath) {
+    url = `/api/auth/proxy${path}`;
+  }
+
+  const res = await fetch(url, {
     ...init,
+    headers,
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);

@@ -19,12 +19,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db, async_session
+from dependencies import require_admin_key
 from models import Artwork, Genre, ImportLog, Movie, ShowGenre, TVShow
 from api.telegram import send_telegram
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+router = APIRouter(prefix="/admin", tags=["Admin"], dependencies=[Depends(require_admin_key)])
 
 
 # ---------------------------------------------------------------------------

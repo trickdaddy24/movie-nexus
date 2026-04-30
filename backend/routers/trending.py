@@ -7,13 +7,14 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db, async_session
+from dependencies import require_read_key
 from models import Movie, TVShow, TrendingSnapshot
 from api.trakt import trakt_client
 from api.telegram import send_telegram
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/trending", tags=["Trending"])
+router = APIRouter(prefix="/trending", tags=["Trending"], dependencies=[Depends(require_read_key)])
 
 
 @router.get("")

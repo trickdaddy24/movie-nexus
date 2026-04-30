@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from database import get_db, async_session
+from dependencies import require_admin_key
 from models import (
     Movie, TVShow, Season, Episode, Person, Credit, Genre, ShowGenre,
     Artwork, Studio, MediaStudio, ExternalID, ImportSession, ImportLog,
@@ -19,7 +20,7 @@ from api.fanart import fanart_client
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/import", tags=["Import"])
+router = APIRouter(prefix="/import", tags=["Import"], dependencies=[Depends(require_admin_key)])
 
 _active_jobs: dict[int, dict] = {}
 

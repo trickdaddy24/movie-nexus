@@ -4,7 +4,7 @@ import re as _re
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
@@ -13,6 +13,7 @@ from database import engine, Base, async_session
 from api.tmdb import tmdb_client
 from api.fanart import fanart_client
 from api.plex import plex_client
+from dependencies import require_read_key
 from nexus_id import ensure_counter_table
 from scheduler import scheduler, setup_scheduler
 from routers import movies, shows, imports, search, export, stats
@@ -44,7 +45,7 @@ def _read_version() -> str:
     try:
         return Path("/app/../VERSION").read_text().strip()
     except FileNotFoundError:
-        return "0.8.0"
+        return "0.9.0"
 
 
 @asynccontextmanager
@@ -72,8 +73,8 @@ app = FastAPI(
     description="Movie & TV show database with multi-source ratings and artwork",
     version=_read_version(),
     lifespan=lifespan,
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
+    docs_url="/api/docs" if not settings.admin_api_key else None,
+    openapi_url="/api/openapi.json" if not settings.admin_api_key else None,
 )
 
 app.add_middleware(
@@ -113,6 +114,6 @@ app.include_router(backfill.router, prefix="/api")
 app.include_router(plex.router, prefix="/api")
 
 
-@app.get("/api/health")
+@app.get("/api/health", dependencies=[Depends(require_read_key)])
 async def health():
     return {"status": "ok", "version": _read_version()}

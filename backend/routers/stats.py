@@ -3,10 +3,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from dependencies import require_read_key
 from models import Movie, TVShow, Episode, Person, Artwork, Genre, ShowGenre, ImportSession
 from schemas import StatsOut
 
-router = APIRouter(prefix="/stats", tags=["Stats"])
+router = APIRouter(prefix="/stats", tags=["Stats"], dependencies=[Depends(require_read_key)])
 
 
 @router.get("", response_model=StatsOut)

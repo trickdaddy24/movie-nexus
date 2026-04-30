@@ -16,11 +16,12 @@ from models import (
 from api.plex import plex_client
 from api.tmdb import tmdb_client
 from api.telegram import send_telegram
+from dependencies import require_admin_key
 from routers.imports import _import_single_movie, _import_single_show
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/plex", tags=["Plex"])
+router = APIRouter(prefix="/plex", tags=["Plex"], dependencies=[Depends(require_admin_key)])
 
 _active_jobs: dict[int, dict] = {}
 

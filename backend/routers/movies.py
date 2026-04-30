@@ -6,11 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
+from dependencies import require_read_key
 from models import Movie, Genre, Artwork, Credit, ExternalID
 from routers._filters import apply_category_filter
 from schemas import MovieBrief, MovieDetail, GenreOut, PaginatedResponse
 
-router = APIRouter(prefix="/movies", tags=["Movies"])
+router = APIRouter(prefix="/movies", tags=["Movies"], dependencies=[Depends(require_read_key)])
 
 
 @router.get("", response_model=PaginatedResponse)

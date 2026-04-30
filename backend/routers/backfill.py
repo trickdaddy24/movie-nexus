@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from sse_starlette.sse import EventSourceResponse
 from sqlalchemy import select, func
 
@@ -11,9 +11,10 @@ from api.tmdb import tmdb_client
 from api.fanart import fanart_client
 from api.telegram import send_telegram
 from database import async_session
+from dependencies import require_admin_key
 from models import Movie, TVShow, Artwork
 
-router = APIRouter(prefix="/admin/backfill", tags=["backfill"])
+router = APIRouter(prefix="/admin/backfill", tags=["backfill"], dependencies=[Depends(require_admin_key)])
 logger = logging.getLogger("movienexus.backfill")
 
 # Active backfill progress: keyed by media_type

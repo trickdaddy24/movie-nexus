@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
+from dependencies import require_read_key
 from models import TVShow, ShowGenre, Season, Episode, Artwork
 from routers._filters import apply_category_filter
 from schemas import (
@@ -13,7 +14,7 @@ from schemas import (
     PaginatedResponse,
 )
 
-router = APIRouter(prefix="/shows", tags=["TV Shows"])
+router = APIRouter(prefix="/shows", tags=["TV Shows"], dependencies=[Depends(require_read_key)])
 
 
 @router.get("", response_model=PaginatedResponse)

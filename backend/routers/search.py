@@ -3,10 +3,11 @@ from sqlalchemy import func, select, union_all, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from dependencies import require_read_key
 from models import Movie, TVShow
 from schemas import SearchResult
 
-router = APIRouter(prefix="/search", tags=["Search"])
+router = APIRouter(prefix="/search", tags=["Search"], dependencies=[Depends(require_read_key)])
 
 
 @router.get("", response_model=list[SearchResult])

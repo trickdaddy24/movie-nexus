@@ -10,9 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
+from dependencies import require_admin_key
 from models import Movie, TVShow, Genre, ShowGenre
 
-router = APIRouter(prefix="/export", tags=["Export"])
+router = APIRouter(prefix="/export", tags=["Export"], dependencies=[Depends(require_admin_key)])
 
 
 async def _get_movies_data(db: AsyncSession) -> list[dict]:

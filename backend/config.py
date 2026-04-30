@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     debug: bool = False
     telegram_bot_token: str = ""   # e.g. 123456:ABC-DEF...
     telegram_chat_id: str = ""     # e.g. -1001234567890
+    read_api_key: str = ""         # required for all read endpoints
+    admin_api_key: str = ""        # required for all write/admin endpoints
 
     model_config = {"env_file": ".env"}
 
