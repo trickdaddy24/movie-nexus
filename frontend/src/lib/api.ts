@@ -17,7 +17,7 @@ async function fetchAPI<T>(path: string, init?: RequestInit): Promise<T> {
 
   // Client-side admin calls go through the auth-gated proxy
   let url = `${API_URL}${path}`;
-  if (typeof window !== "undefined" && isAdminPath) {
+  if (typeof window !== "undefined" && (isAdminPath || path === "/health")) {
     url = `/api/auth/proxy${path}`;
   }
 
