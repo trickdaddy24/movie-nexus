@@ -354,3 +354,15 @@ async def stream_logs():
             await asyncio.sleep(0.5)
 
     return EventSourceResponse(event_stream())
+
+
+# ---------------------------------------------------------------------------
+# Heartbeat (manual trigger)
+# ---------------------------------------------------------------------------
+
+@router.post("/heartbeat")
+async def trigger_heartbeat():
+    """Manually trigger a heartbeat check and send to Telegram."""
+    from heartbeat import run_heartbeat
+    await run_heartbeat()
+    return {"message": "Heartbeat sent"}

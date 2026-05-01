@@ -422,3 +422,11 @@ export async function resumeFullSync(): Promise<{ message: string }> {
 export async function cancelFullSync(): Promise<{ message: string }> {
   return fetchAPI("/plex/full-sync", { method: "DELETE" });
 }
+
+export async function triggerHeartbeat(): Promise<{ message: string }> {
+  return fetchAPI("/admin/heartbeat", { method: "POST" });
+}
+
+export async function getHealthInfo(): Promise<{ status: string; version: string }> {
+  return fetchAPI("/health");
+}

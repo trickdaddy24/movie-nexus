@@ -51,8 +51,19 @@ def setup_scheduler() -> None:
             replace_existing=True,
         )
 
+    # Heartbeat — random time between 1am-12pm Eastern daily
+    from heartbeat import get_random_heartbeat_schedule
+    _hb_hour, _hb_minute = get_random_heartbeat_schedule()
+    scheduler.add_job(
+        _heartbeat_job,
+        CronTrigger(hour=_hb_hour, minute=_hb_minute, timezone="America/New_York"),
+        id="heartbeat",
+        name=f"Daily heartbeat ({_hb_hour}:{_hb_minute:02d} ET)",
+        replace_existing=True,
+    )
+
     scheduler.start()
-    _jobs = "trending@2am, ratings+backup@3am, summary@8am"
+    _jobs = f"trending@2am, ratings+backup@3am, summary@8am, heartbeat@{_hb_hour}:{_hb_minute:02d}ET"
     if _settings.plex_url and _settings.plex_token:
         _jobs += ", plex@4am"
     logger.info(f"Scheduler started ({_jobs})")
@@ -81,3 +92,9 @@ async def _plex_sync_job() -> None:
     logger.info("Running Plex library sync...")
     from routers.plex import run_plex_sync_job
     await run_plex_sync_job()
+
+
+async def _heartbeat_job() -> None:
+    logger.info("Running daily heartbeat...")
+    from heartbeat import run_heartbeat
+    await run_heartbeat()

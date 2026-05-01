@@ -10,6 +10,8 @@ import {
   verifyArtwork,
   getImportLogs,
   getPlexStatus,
+  triggerHeartbeat,
+  getHealthInfo,
   ImportSessionSummary,
   ArtworkVerifyResult,
   ImportLogEntry,
@@ -58,6 +60,9 @@ export default function AdminPage() {
   const [artBackfillStatus, setArtBackfillStatus] = useState<string | null>(null);
 
   const [plexStatus, setPlexStatus] = useState<PlexStatus | null>(null);
+  const [heartbeatLoading, setHeartbeatLoading] = useState(false);
+  const [heartbeatStatus, setHeartbeatStatus] = useState<string | null>(null);
+  const [version, setVersion] = useState<string>("");
 
   const sseRef = useRef<EventSource | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -66,6 +71,7 @@ export default function AdminPage() {
   useEffect(() => {
     loadSessions();
     loadPlexStatus();
+    getHealthInfo().then((h) => setVersion(h.version)).catch(() => {});
     return () => {
       sseRef.current?.close();
       logStreamRef.current?.close();
@@ -220,6 +226,19 @@ export default function AdminPage() {
     }
   }
 
+  async function handleHeartbeat() {
+    setHeartbeatLoading(true);
+    setHeartbeatStatus(null);
+    try {
+      const res = await triggerHeartbeat();
+      setHeartbeatStatus(res.message);
+    } catch (err: unknown) {
+      setHeartbeatStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setHeartbeatLoading(false);
+    }
+  }
+
   const processed = liveProgress
     ? liveProgress.imported + liveProgress.skipped + liveProgress.failed
     : 0;
@@ -230,7 +249,12 @@ export default function AdminPage() {
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8 space-y-10">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin</h1>
+        {version && (
+          <span className="text-sm text-gray-400 dark:text-gray-500 font-mono">v{version}</span>
+        )}
+      </div>
 
       {/* Live Monitor */}
       <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-4">
@@ -414,6 +438,31 @@ export default function AdminPage() {
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-400" />
               <span className="text-gray-500">Not configured</span>
+            </span>
+          )}
+        </div>
+      </section>
+
+      {/* Heartbeat */}
+      <section className="bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-[#2A2A2A] p-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Heartbeat</h2>
+          <span className="text-xs text-gray-400 dark:text-gray-500">Runs daily at a random time (1am-12pm ET)</span>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-[#A1A1A1]">
+          Health check of all Docker services, network info, and system status — sent to Telegram.
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleHeartbeat}
+            disabled={heartbeatLoading}
+            className="px-4 py-2 rounded-lg bg-nexus-accent text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {heartbeatLoading ? "Sending..." : "Test Heartbeat"}
+          </button>
+          {heartbeatStatus && (
+            <span className={`text-sm ${heartbeatStatus.startsWith("Error") ? "text-red-400" : "text-green-500"}`}>
+              {heartbeatStatus}
             </span>
           )}
         </div>

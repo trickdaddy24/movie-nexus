@@ -2,7 +2,7 @@
 
 A full-featured movie and TV show database platform. Import from TMDb, TVDb, Plex, Trakt. Export to JSON/CSV/XML. Browse by category, filter by genre, and explore comprehensive metadata with multi-source ratings.
 
-[![Version](https://img.shields.io/badge/version-0.10.0-blue)](./VERSION)
+[![Version](https://img.shields.io/badge/version-0.11.0-blue)](./VERSION)
 [![License](https://img.shields.io/badge/license-MIT-green)](#license)
 [![GitHub](https://img.shields.io/badge/github-trickdaddy24%2Fmovie--nexus-black?logo=github)](https://github.com/trickdaddy24/movie-nexus)
 
@@ -101,6 +101,7 @@ Automated daily backups run via cron at 3:00 AM. Retention: 7 daily + 4 weekly.
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 0.11.0 | 2026-04-30 | Daily heartbeat health check — monitors all 4 Docker services, reports to Telegram at random time |
 | 0.10.0 | 2026-04-29 | Chunked full Plex sync with adaptive pacing, Redis crash recovery, Telegram batch notifications |
 | 0.9.0 | 2026-04-30 | Two-tier API key protection, emergency admin bypass token, Swagger UI gating |
 | 0.8.0 | 2026-04-29 | Clickable genres, ID row on detail pages, TV artwork fix, admin dark mode fix |

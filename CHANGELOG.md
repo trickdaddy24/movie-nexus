@@ -5,6 +5,15 @@ All notable changes to MovieNexus will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-04-30
+
+### Added
+- Daily heartbeat health check — monitors all 4 Docker services (db, redis, backend, frontend)
+- Reports remote IP, local IP, OS info, and current time to Telegram
+- Scheduled at a random time between 1am-12pm Eastern each day (re-randomized on restart)
+- Test Heartbeat button on admin console for manual trigger
+- Version number displayed in admin console header
+
 ## [0.10.0] - 2026-04-29
 
 ### Added
