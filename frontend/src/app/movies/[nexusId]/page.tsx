@@ -67,26 +67,26 @@ export default async function MovieDetailPage({
         {/* Info */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
           {/* Title + content rating */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
+          <div>
+            <div className="flex items-center gap-2.5">
               <h1 className="text-3xl font-black tracking-tight text-[#111827] dark:text-white leading-tight">
                 {movie.title}
               </h1>
-              {movie.original_title && movie.original_title !== movie.title && (
-                <p className="text-sm text-nexus-muted dark:text-[#A1A1A1] mt-0.5">
-                  {movie.original_title}
-                </p>
-              )}
-              {movie.tagline && (
-                <p className="text-sm italic text-nexus-muted dark:text-[#A1A1A1] mt-1">
-                  &ldquo;{movie.tagline}&rdquo;
-                </p>
+              {movie.content_rating && (
+                <span className="shrink-0 rounded border border-nexus-border dark:border-[#2A2A2A] px-2 py-0.5 text-xs font-mono text-nexus-muted dark:text-[#A1A1A1]">
+                  {movie.content_rating}
+                </span>
               )}
             </div>
-            {movie.content_rating && (
-              <span className="shrink-0 mt-1 rounded border border-nexus-border dark:border-[#2A2A2A] px-2 py-0.5 text-xs font-mono text-nexus-muted dark:text-[#A1A1A1]">
-                {movie.content_rating}
-              </span>
+            {movie.original_title && movie.original_title !== movie.title && (
+              <p className="text-sm text-nexus-muted dark:text-[#A1A1A1] mt-0.5">
+                {movie.original_title}
+              </p>
+            )}
+            {movie.tagline && (
+              <p className="text-sm italic text-nexus-muted dark:text-[#A1A1A1] mt-1">
+                &ldquo;{movie.tagline}&rdquo;
+              </p>
             )}
           </div>
 
